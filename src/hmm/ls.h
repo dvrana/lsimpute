@@ -12,11 +12,11 @@
  * the ancestor is reference genome j at SNP i.
  * 
  * Probabilities are for genome id from sample, using ref as a reference panel.
- * g  - TODO: WHAT IS
- * ck - TODO: WHAT IS
- * theta - Recombination rate constant
+ * g  - Garble rate- probability that a test haplotype doesn't line up with
+ *   reference from which it comes.
+ * theta - Recombination rate constant, s.t. jump probability is 
+ *   1-e^{-theta d}, where d is distance in centimorgans
  */
-float* ls(genome_t* sample, int id, genome_t* ref, float g, float ck, 
-    float theta);
+float* ls(genome_t* sample, std::string id, genome_t* ref, float g, float theta); 
 
 #endif /* LS_H */
