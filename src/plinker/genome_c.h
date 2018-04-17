@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unordered_map>
 #include <memory>
+#include <string>
 
 // struct fields are WIP, use interfacing functions below
 typedef struct snp {
@@ -21,7 +22,7 @@ struct genome {
 typedef std::shared_ptr<struct genome> genome_t;
 
 genome_t g_empty();
-genome_t g_fromfile(FILE* ped, FILE* map);
+genome_t g_fromfile(std::string pedname, std::string mapname);
 
 // number of individuals
 int g_nsample(genome_t g);
