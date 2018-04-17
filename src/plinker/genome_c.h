@@ -1,5 +1,4 @@
 
-#include <stdio.h>
 #include <unordered_map>
 #include <memory>
 #include <string>
@@ -12,7 +11,7 @@ struct genome {
     int nsnp;
     int nsample;
     // TODO: use more than individual id
-    std::unordered_map<int, snp_t*> samples;
+    std::unordered_map<std::string, snp_t*> samples;
 };
 
 // NOTE TO DYLAN (delete):
@@ -34,7 +33,7 @@ int g_nsnp(genome_t g);
 void g_filterby(genome_t g, genome_t filt);
 
 // Filters out genomes not present among n given people in array ids
-void g_filterindiv(genome_t g, int* ids, int n);
+void g_filterindiv(genome_t g, std::string* ids, int n);
 
 // Humans have 22 autosomes (present in everyone, two copies each) plus sex
 // chromosomes and mitochondrial DNA. That's complex. For a first pass, remove
@@ -42,10 +41,10 @@ void g_filterindiv(genome_t g, int* ids, int n);
 void g_filterchrom(genome_t g, int chromosome);
 
 // Lookup SNP list by person
-snp_t* g_plookup(genome_t g, int pid);
+snp_t* g_plookup(genome_t g, std::string pid);
 
 // Lookup SNP by person and SNP identifier
-snp_t g_ilookup(genome_t g, int pid, int sid);
+snp_t g_ilookup(genome_t g, std::string pid, int sid);
 
 // Genetic distance (in centimorgans) of s
 double s_dst(snp_t s);
