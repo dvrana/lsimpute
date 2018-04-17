@@ -1,6 +1,9 @@
 /* Interface for Li-Stephens imputation.
  */
 
+#ifndef LS_H
+#define LS_H
+
 #include <plinker/genome_c.h>
 
 /* Returns smoothed Li-Stephens probabilities as a two-dimensional, 
@@ -15,3 +18,5 @@
  */
 float* ls(genome_t* sample, int id, genome_t* ref, float g, float ck, 
     float theta);
+
+#endif /* LS_H */
