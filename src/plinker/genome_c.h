@@ -1,24 +1,51 @@
 
+#include <vector>
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <bitset>
 
-// struct fields are WIP, use interfacing functions below
-typedef struct snp {
-} snp_t;
+// SNPs are stored as bitvectors in ACGT order
+typedef std::bitset<8> snp_t;
 
-struct genome {
-    int nsnp;
-    int nsample;
-    // TODO: use more than individual id
-    std::unordered_map<std::string, snp_t*> samples;
+enum allele { A, C, G, T };
+typedef std::pair<allele, allele> apair;
+
+struct snpmeta {
+    int ind; // index in mapfile ordering
+    std::string id;
+    int num;
+    int dist;
+
+    bool operator < (const snpmeta& s) const {
+        return dist < s.dist;
+    }
 };
 
-// NOTE TO DYLAN (delete):
-//   I'm choosing to use shared_ptrs to avoid the hassle of having to manually
-//   manage the memory. Let me know if this causes issues -- it shouldn't,
-//   beyond possibly needing to change function headers.
+struct snpmap {
+    int nsnp;
+    // maps index in mapfile to index in bp ordering
+    std::shared_ptr<int[]> ids;
+    // maps snp id string to index in bp ordering
+    std::unordered_map<std::string, int> sids;
+    // ordered in bp order
+    std::shared_ptr<std::vector<struct snpmeta>> data;
+};
+
+struct genome {
+    int nsample;
+    struct snpmap map;
+    // maps familyid_indid to sample
+    std::unordered_map<std::string, std::shared_ptr<snp_t[]>> samples;
+};
+
 typedef std::shared_ptr<struct genome> genome_t;
+
+struct genomeErr : public std::exception {
+    std::string msg;
+
+    genomeErr(std::string msg_) { msg = msg_; }
+};
 
 genome_t g_empty();
 genome_t g_fromfile(std::string pedname, std::string mapname);
@@ -44,8 +71,10 @@ void g_filterchrom(genome_t g, int chromosome);
 snp_t* g_plookup(genome_t g, std::string pid);
 
 // Lookup SNP by person and SNP identifier
-snp_t g_ilookup(genome_t g, std::string pid, int sid);
+snp_t g_sidlookup(genome_t g, std::string pid, std::string sid);
 
-// Genetic distance (in centimorgans) of s
-double s_dst(snp_t s);
+// Lookup SNP by person and bp index
+snp_t g_indlookup(genome_t g, std::string pid, int ind);
+
+bool s_query(snp_t s, allele which);
 
