@@ -50,7 +50,32 @@ void g_filterby(genome_t g, genome_t f) {
     auto gm = g->map;
     auto fm = f->map;
 
-    // TODO
+    auto keeps = std::vector<struct snpmeta>();
+    for (int i = 0 ; i < gm.nsnp ; i += 1) {
+        auto idx = gm.ids[i];
+        auto k = (*gm.data)[idx];
+        if (fm.sids.find(k.id) != fm.sids.end()) {
+            keeps.push_back((*gm.data)[idx]);
+        }
+    }
+
+    size_t nsnp = keeps.size();
+
+    for (size_t i = 0 ; i < nsnp ; i += 1) { keeps[i].ind = i; }
+
+    (g->map).nsnp = nsnp;
+    std::sort(keeps.begin(), keeps.end());
+
+    (g->map).sids.clear();
+    (g->map).ids = std::shared_ptr<int[]>
+        (new int[nsnp], std::default_delete<int[]>());
+
+    for (size_t i = 0 ; i < nsnp ; i += 1) {
+        (g->map).sids.insert(std::make_pair(keeps[i].id, i));
+        (g->map).ids[keeps[i].ind] = i;
+    }
+
+    (g->map).data = std::make_shared<std::vector<struct snpmeta>>(keeps);
 }
 
 void g_filterindiv(genome_t g, std::string* ids, int n) {
@@ -68,7 +93,29 @@ void g_filterindiv(genome_t g, std::string* ids, int n) {
 }
 
 void g_filterchrom(genome_t g, int chromosome) {
-  // TODO
+    auto keeps = std::vector<struct snpmeta>();
+    auto gm = g->map;
+
+    for (int i = 0 ; i < gm.nsnp ; i += 1) {
+        auto idx = gm.ids[i];
+        auto k = (*gm.data)[idx];
+        if (k.chnum == chromosome) { keeps.push_back(k); }
+    }
+
+    auto nsnp = keeps.size();
+
+    for (size_t i = 0 ; i < nsnp ; i += 1) { keeps[i].ind = i; }
+
+    (g->map).nsnp = nsnp;
+    std::sort(keeps.begin(), keeps.end());
+
+    (g->map).ids = std::shared_ptr<int[]>
+        (new int[nsnp], std::default_delete<int[]>());
+
+    for (size_t i = 0 ; i < nsnp ; i += 1) {
+        (g->map).sids.insert(std::make_pair(keeps[i].id, i));
+        (g->map).ids[keeps[i].ind] = i;
+    }
 }
 
 snp_t* g_plookup(genome_t g, std::string pid) {
@@ -140,12 +187,12 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         IFCHK(lstr >> chs,
                 ERROR(mapname, ln, "parse error\n");
                 return NULL);
-        if (chs.compare("X") == 0) { s.num = 23; }
-        else if (chs.compare("Y") == 0) { s.num = 24; }
+        if (chs.compare("X") == 0) { s.chnum = 23; }
+        else if (chs.compare("Y") == 0) { s.chnum = 24; }
         else {
             try {
-                s.num = std::stoi(chs);
-                if (s.num < 0 || s.num > 24) {
+                s.chnum = std::stoi(chs);
+                if (s.chnum < 0 || s.chnum > 24) {
                     ERROR(mapname, ln, "chromosome number must be 1-22,X,Y");
                     return NULL;
                 }

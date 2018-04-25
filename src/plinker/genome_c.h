@@ -14,7 +14,7 @@ typedef std::pair<allele, allele> apair;
 struct snpmeta {
     int ind; // index in mapfile ordering
     std::string id;
-    int num;
+    int chnum;
     int dist;
 
     bool operator < (const snpmeta& s) const {
