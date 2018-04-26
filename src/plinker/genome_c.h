@@ -1,9 +1,10 @@
 
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <string>
 #include <bitset>
+#include <iterator>
 
 // SNPs are stored as bitvectors in ACGT order
 typedef std::bitset<8> snp_t;
@@ -27,7 +28,7 @@ struct snpmap {
     // maps index in mapfile to index in bp ordering
     std::shared_ptr<int[]> ids;
     // maps snp id string to index in bp ordering
-    std::unordered_map<std::string, int> sids;
+    std::map<std::string, int> sids;
     // ordered in bp order
     std::shared_ptr<std::vector<struct snpmeta>> data;
 };
@@ -36,7 +37,11 @@ struct genome {
     int nsample;
     struct snpmap map;
     // maps familyid_indid to sample
-    std::unordered_map<std::string, std::shared_ptr<snp_t[]>> samples;
+    std::map<std::string, std::shared_ptr<snp_t[]>> samples;
+
+    typedef std::map<std::string, std::shared_ptr<snp_t[]>>::iterator iter;
+    iter begin() { return samples.begin(); }
+    iter end() { return samples.end(); }
 };
 
 typedef std::shared_ptr<struct genome> genome_t;
