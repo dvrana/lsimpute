@@ -9,16 +9,16 @@
 typedef std::bitset<8> snp_t;
 
 enum allele { A, C, G, T };
-typedef std::pair<allele, allele> apair;
 
 struct snpmeta {
     int ind; // index in mapfile ordering
     std::string id;
     int chnum;
-    int dist;
+    double gdist;
+    int pos;
 
     bool operator < (const snpmeta& s) const {
-        return dist < s.dist;
+        return pos < s.pos;
     }
 };
 
@@ -75,6 +75,9 @@ snp_t g_sidlookup(genome_t g, std::string pid, std::string sid);
 
 // Lookup SNP by person and bp index
 snp_t g_indlookup(genome_t g, std::string pid, int ind);
+
+// Gets the genetic distance between SNPs i and i+1
+double g_rec_dist(genome_t g, int i);
 
 bool s_query(snp_t s, allele which);
 
