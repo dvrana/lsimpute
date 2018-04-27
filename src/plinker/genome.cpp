@@ -158,7 +158,7 @@ snp_t g_indlookup(genome_t g, std::string pid, int ind) {
 }
 
 bool s_query(snp_t s, allele which) {
-    return s.test(rselect(which));
+    return s.test(rselect(which)) || s.test(rselect(which) + 4);
 }
 
 genome_t g_empty() {
