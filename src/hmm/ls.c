@@ -7,24 +7,30 @@
 
 #define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)
 
-// Takes the n log-scaled float values in A and returns their log-scaled sum
-float logsum(float* A, int n) {
-  return 0.0f; // TODO: this
-}
-
 // Adds two log-scaled probabilities
 float logadd(float x, float y) {
-  return 0.0f; // TODO: this
+  return x + log(1.0f + exp(y - x));
 }
 
-// Calculates ln(1.0f - x), where x is a log-scaled probability
-float logsub1(float x) {
-  return 0.0f; // TODO: this
+// Takes the n log-scaled float values in A and returns their log-scaled sum
+// Undefined if n < 1
+float logsum(float* A, int n) {
+  if (n <= 1) return A[0];
+  float x = logadd(A[0],A[1]);
+  for (int i = 2; i < n; i++) x = logadd(x, A[i]);
+  return x;
+}
+
+// Calculates ln(1.0f - exp(x)), where x is a log-scaled probability
+float logsub1(float x) { // TODO: this should be able to be approximated better
+  return log(1.0f - exp(x));
 }
 
 // Normalizes the n floating point values in the array starting at A
 void logrownorm(float* A, int n) {
-  return; // TODO: this
+  float x = logsum(A, n);
+  for (int i = 0; i < n; i++) A[i] -= x;
+  return;
 }
 
 /* Forward algorithm
