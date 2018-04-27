@@ -43,8 +43,8 @@ static inline int rselect(allele a) {
     }
 }
 
-int nsample(genome_t g) { return g->nsample; }
-int nsnp(genome_t g) { return (g->map).nsnp; }
+int g_nsample(genome_t g) { return g->nsample; }
+int g_nsnp(genome_t g) { return (g->map).nsnp; }
 
 void g_filterby(genome_t g, genome_t f) {
     auto gm = g->map;

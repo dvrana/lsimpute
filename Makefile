@@ -2,7 +2,9 @@
 # infrastructure
 DEBUG=0
 CC=g++
+NVCC=nvcc
 CFLAGS=-std=c++11 -DDEBUG=$(DEBUG)
+NVCCFLAGS=-O3 -m64 --gpu-architecture compute_61
 OBJDIR=objs
 SRCDIR=src
 TESTDIR=tests
@@ -15,6 +17,8 @@ MAIN=$(SRCDIR)/$(EXECUTABLE).cpp
 PLINKDIR=$(SRCDIR)/$(PLINK)
 PLINKER=$(OBJDIR)/$(PLINK).o
 
+LSIMPUTE_CU=lsimpute
+
 # Used by the testing infrastructure. Add every header file here.
 HEADERS=$(PLINKDIR)/genome_c.h
 
@@ -23,7 +27,7 @@ TEST_EX=$(TESTDIR)/test
 TEST_SCRIPT=tester.py
 
 # For every distinct "module", there should be an entry here.
-OBJS=$(OBJDIR)/$(PLINK).o
+OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LSIMPUTE_CU).o
 
 .PHONY: dirs clean runtests
 
@@ -41,6 +45,9 @@ clean:
 # a given module.
 $(PLINKER): $(PLINKDIR)/genome.cpp $(PLINKDIR)/genome_c.h
 	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu
+	$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
 $(OBJS): dirs
 
