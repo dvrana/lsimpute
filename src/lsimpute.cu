@@ -1,7 +1,8 @@
 
 #include <lsimpute.h>
 
-void lsimpute::compute() {
+float* lsimpute::compute() {
   // do the thing!
+  return NULL; // TODO: this
 }
 

@@ -13,6 +13,10 @@ struct lsimputer {
     uint8_t* snps;
     double* dists;
 
+    // Constants for model
+    float g;
+    float theta;
+
     lsimputer(int nsnp_) {
         nsnp = nsnp_;
         snps = new uint8_t[nsnp];
@@ -26,8 +30,8 @@ struct lsimputer {
 
     // This function should probably be defined in the CUDA files, by defining
     // the function lsimpute::compute in lsimpute.cu (or equivalents)
-    // TODO: return types?
-    void compute();
+    // Returns a malloc'ed float array
+    float* compute();
 };
 
 #endif
