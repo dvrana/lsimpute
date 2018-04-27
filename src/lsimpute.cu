@@ -1,7 +1,7 @@
 
-#include <lsimpute.h>
+#include "lsimpute.h"
 
-float* lsimpute::compute() {
+float* lsimputer::compute() {
   // do the thing!
   return NULL; // TODO: this
 }

@@ -6,7 +6,8 @@
 
 #include <cstdint>
 
-struct lsimputer {
+class lsimputer {
+public:
     int nsnp;
     // For now, SNPs are represented using full 8-bit valued bitvectors. If
     // memory is a concern, we can fix this.
