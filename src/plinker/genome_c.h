@@ -1,24 +1,25 @@
 
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <string>
 #include <bitset>
+#include <iterator>
 
 // SNPs are stored as bitvectors in ACGT order
 typedef std::bitset<8> snp_t;
 
 enum allele { A, C, G, T };
-typedef std::pair<allele, allele> apair;
 
 struct snpmeta {
     int ind; // index in mapfile ordering
     std::string id;
     int chnum;
-    int dist;
+    double gdist;
+    int pos;
 
     bool operator < (const snpmeta& s) const {
-        return dist < s.dist;
+        return pos < s.pos;
     }
 };
 
@@ -27,7 +28,7 @@ struct snpmap {
     // maps index in mapfile to index in bp ordering
     std::shared_ptr<int[]> ids;
     // maps snp id string to index in bp ordering
-    std::unordered_map<std::string, int> sids;
+    std::map<std::string, int> sids;
     // ordered in bp order
     std::shared_ptr<std::vector<struct snpmeta>> data;
 };
@@ -36,7 +37,11 @@ struct genome {
     int nsample;
     struct snpmap map;
     // maps familyid_indid to sample
-    std::unordered_map<std::string, std::shared_ptr<snp_t[]>> samples;
+    std::map<std::string, std::shared_ptr<snp_t[]>> samples;
+
+    typedef std::map<std::string, std::shared_ptr<snp_t[]>>::iterator iter;
+    iter begin() { return samples.begin(); }
+    iter end() { return samples.end(); }
 };
 
 typedef std::shared_ptr<struct genome> genome_t;
@@ -75,6 +80,9 @@ snp_t g_sidlookup(genome_t g, std::string pid, std::string sid);
 
 // Lookup SNP by person and bp index
 snp_t g_indlookup(genome_t g, std::string pid, int ind);
+
+// Gets the genetic distance between SNPs i and i+1
+double g_rec_dist(genome_t g, int i);
 
 bool s_query(snp_t s, allele which);
 

@@ -118,6 +118,11 @@ void g_filterchrom(genome_t g, int chromosome) {
     }
 }
 
+double g_rec_dist(genome_t g, int index) {
+    auto m = g->map.data;
+    return ((*m)[index+1].gdist - (*m)[index].gdist) / 100;
+}
+
 snp_t* g_plookup(genome_t g, std::string pid) {
     auto lst = (g->samples).find(pid);
 
@@ -153,7 +158,7 @@ snp_t g_indlookup(genome_t g, std::string pid, int ind) {
 }
 
 bool s_query(snp_t s, allele which) {
-    return s.test(rselect(which));
+    return s.test(rselect(which)) || s.test(rselect(which) + 4);
 }
 
 genome_t g_empty() {
@@ -206,7 +211,10 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         IFCHK(lstr >> s.id,
                 ERROR(mapname, ln, "parse error\n");
                 return NULL);
-        IFCHK(lstr >> s.dist,
+        IFCHK(lstr >> s.gdist,
+                ERROR(mapname, ln, "parse error\n");
+                return NULL);
+        IFCHK(lstr >> s.pos,
                 ERROR(mapname, ln, "parse error\n");
                 return NULL);
         s.ind = ln;
