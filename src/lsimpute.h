@@ -6,12 +6,17 @@
 
 #include <cstdint>
 
-struct lsimputer {
+class lsimputer {
+public:
     int nsnp;
     // For now, SNPs are represented using full 8-bit valued bitvectors. If
     // memory is a concern, we can fix this.
     uint8_t* snps;
     double* dists;
+
+    // Constants for model
+    float g;
+    float theta;
 
     lsimputer(int nsnp_) {
         nsnp = nsnp_;
@@ -26,8 +31,8 @@ struct lsimputer {
 
     // This function should probably be defined in the CUDA files, by defining
     // the function lsimpute::compute in lsimpute.cu (or equivalents)
-    // TODO: return types?
-    void compute();
+    // Returns a malloc'ed float array
+    float* compute();
 };
 
 #endif

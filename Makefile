@@ -1,13 +1,16 @@
 
 # infrastructure
 DEBUG=0
+OPT=O3
 CC=g++
 NVCC=nvcc
-CFLAGS=-std=c++11 -DDEBUG=$(DEBUG)
-NVCCFLAGS=-O3 -m64 --gpu-architecture compute_61
+CFLAGS=-std=c++11 -DDEBUG=$(DEBUG) -$(OPT)
+NVCCFLAGS=-$(OPT) -m64 --gpu-architecture compute_61 -std=c++11
 OBJDIR=objs
 SRCDIR=src
 TESTDIR=tests
+
+LDFLAGS=-L/usr/local/depot/cuda-8.0/lib64/ -lcudart
 
 # Not particularly important, but useful if code structure changes
 PLINK=plinker
@@ -36,7 +39,7 @@ OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LSIMPUTE_CU).o $(OBJDIR)/$(LS).o
 .PHONY: dirs clean runtests
 
 $(EXECUTABLE): dirs $(OBJS) $(MAIN)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(MAIN)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(MAIN)
 
 dirs:
 	mkdir -p $(OBJDIR)

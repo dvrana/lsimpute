@@ -26,20 +26,24 @@ struct snpmeta {
 struct snpmap {
     int nsnp;
     // maps index in mapfile to index in bp ordering
-    std::shared_ptr<int[]> ids;
+    std::shared_ptr<int> ids;
     // maps snp id string to index in bp ordering
     std::map<std::string, int> sids;
     // ordered in bp order
     std::shared_ptr<std::vector<struct snpmeta>> data;
+
+    int* id_arr() {
+        return ids.get();
+    }
 };
 
 struct genome {
     int nsample;
     struct snpmap map;
     // maps familyid_indid to sample
-    std::map<std::string, std::shared_ptr<snp_t[]>> samples;
+    std::map<std::string, std::shared_ptr<snp_t>> samples;
 
-    typedef std::map<std::string, std::shared_ptr<snp_t[]>>::iterator iter;
+    typedef std::map<std::string, std::shared_ptr<snp_t>>::iterator iter;
     iter begin() { return samples.begin(); }
     iter end() { return samples.end(); }
 };

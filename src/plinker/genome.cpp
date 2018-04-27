@@ -50,9 +50,11 @@ void g_filterby(genome_t g, genome_t f) {
     auto gm = g->map;
     auto fm = f->map;
 
-    auto keeps = std::vector<struct snpmeta>();
+    auto keeps = std::vector<struct snpmeta>(16);
     for (int i = 0 ; i < gm.nsnp ; i += 1) {
-        auto idx = gm.ids[i];
+        // XXX - this would just be gm.id[i] if we had a more recent version of
+        // g++ on andrew...
+        auto idx = gm.id_arr()[i];
         auto k = (*gm.data)[idx];
         if (fm.sids.find(k.id) != fm.sids.end()) {
             keeps.push_back((*gm.data)[idx]);
@@ -67,12 +69,12 @@ void g_filterby(genome_t g, genome_t f) {
     std::sort(keeps.begin(), keeps.end());
 
     (g->map).sids.clear();
-    (g->map).ids = std::shared_ptr<int[]>
+    (g->map).ids = std::shared_ptr<int>
         (new int[nsnp], std::default_delete<int[]>());
 
     for (size_t i = 0 ; i < nsnp ; i += 1) {
         (g->map).sids.insert(std::make_pair(keeps[i].id, i));
-        (g->map).ids[keeps[i].ind] = i;
+        (g->map).id_arr()[keeps[i].ind] = i;
     }
 
     (g->map).data = std::make_shared<std::vector<struct snpmeta>>(keeps);
@@ -97,7 +99,7 @@ void g_filterchrom(genome_t g, int chromosome) {
     auto gm = g->map;
 
     for (int i = 0 ; i < gm.nsnp ; i += 1) {
-        auto idx = gm.ids[i];
+        auto idx = gm.id_arr()[i];
         auto k = (*gm.data)[idx];
         if (k.chnum == chromosome) { keeps.push_back(k); }
     }
@@ -109,12 +111,12 @@ void g_filterchrom(genome_t g, int chromosome) {
     (g->map).nsnp = nsnp;
     std::sort(keeps.begin(), keeps.end());
 
-    (g->map).ids = std::shared_ptr<int[]>
+    (g->map).ids = std::shared_ptr<int>
         (new int[nsnp], std::default_delete<int[]>());
 
     for (size_t i = 0 ; i < nsnp ; i += 1) {
         (g->map).sids.insert(std::make_pair(keeps[i].id, i));
-        (g->map).ids[keeps[i].ind] = i;
+        (g->map).id_arr()[keeps[i].ind] = i;
     }
 }
 
@@ -132,7 +134,7 @@ snp_t* g_plookup(genome_t g, std::string pid) {
     auto result = new snp_t[(g->map).nsnp];
 
     for (int i = 0 ; i < (g->map).nsnp ; i += 1) {
-        result[i] = lst->second[i];
+        result[i] = (lst->second).get()[i];
     }
 
     return result;
@@ -227,13 +229,13 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
 
     std::sort((*data).begin(), (*data).end());
     auto ids =
-        std::shared_ptr<int[]>(
+        std::shared_ptr<int>(
                 new int[ln],
                 std::default_delete<int[]>());
 
     for (int i = 0 ; i < ln ; i += 1) {
         auto s = (*data)[i];
-        ids[s.ind] = i;
+        ids.get()[s.ind] = i;
         (result->map).sids.insert(std::make_pair(s.id, i));
     }
 
@@ -272,19 +274,20 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         std::stringstream name;
         name << fid << "_" << iid;
 
-        auto smp = std::shared_ptr<snp_t[]>(new snp_t[nsnp]);
+        auto smp = std::shared_ptr<snp_t>(new snp_t[nsnp]);
+        auto smpp = smp.get();
         for (int i = 0 ; i < nsnp ; i += 1) {
             std::string a1, a2;
 
-            smp[i] = snp_t(0);
+            smpp[i] = snp_t(0);
             lstr >> a1 >> a2;
 
             int j;
 
             if ((j = select(a1, pedname, ln)) == -1) { return NULL; }
-            smp[i].set(j);
+            smpp[i].set(j);
             if ((j = select(a2, pedname, ln)) == -1) { return NULL; }
-            smp[i].set(j+4);
+            smpp[i].set(j+4);
         }
 
         (result->samples).insert(std::make_pair(name.str(), smp));
