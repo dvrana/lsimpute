@@ -24,7 +24,7 @@ HMM=$(OBJDIR)/$(LS).o
 LSIMPUTE_CU=lsimpute
 
 # Used by the testing infrastructure. Add every header file here.
-HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h
+HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h
 
 TEST_H=$(TESTDIR)/testproto.h
 TEST_EX=$(TESTDIR)/test
@@ -50,7 +50,7 @@ clean:
 $(PLINKER): $(PLINKDIR)/genome.cpp $(PLINKDIR)/genome_c.h
 	$(CC) $< $(CFLAGS) -c -o $@
 
-$(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu
+$(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu $(SRCDIR)/$(LSIMPUTE_CU).h
 	$(NVCC) $< $(NVCCFLAGS) -c -o $@
 
 $(HMM): $(HMMDIR)/ls.c $(HMMDIR)/ls.h $(PLINKDIR)/genome_c.h
