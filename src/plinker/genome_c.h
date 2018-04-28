@@ -1,4 +1,7 @@
 
+#ifndef GENOME_C_H
+#define GENOME_C_H
+
 #include <vector>
 #include <map>
 #include <memory>
@@ -89,4 +92,6 @@ snp_t g_indlookup(genome_t g, std::string pid, int ind);
 double g_rec_dist(genome_t g, int i);
 
 bool s_query(snp_t s, allele which);
+
+#endif
 
