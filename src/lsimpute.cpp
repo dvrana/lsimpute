@@ -8,7 +8,7 @@ lsimputer::lsimputer(genome_t g) {
     nsnp = g_nsnp(g);
     nsample = g_nsample(g);
 
-    dists = new double[nsnp-1];
+    dists = new float[nsnp-1];
     ref = new uint8_t[nsnp * nsample];
 
     for (int i = 0 ; i < nsnp-1 ; i += 1) {

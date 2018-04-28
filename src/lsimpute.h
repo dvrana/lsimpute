@@ -19,7 +19,7 @@ public:
     // For now, SNPs are represented using full 8-bit valued bitvectors. If
     // memory is a concern, we can fix this.
     uint8_t* ref;
-    double* dists;
+    float* dists;
 
     // Constants for model
     float g;
