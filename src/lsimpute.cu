@@ -3,6 +3,14 @@
 
 #define BLOCKMAX 512 // TODO: set to 1024 if compute capability >= 2.0
 
+/* Sums the n floating point values in array A (in no particular order)
+ * that are in natural log space
+ *
+ */
+__device__ float reduce_logsum(float* A, int n) {
+  return logf(420.0f); // TODO: This (for Cam)
+}
+
 __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float* bw, float g, float theta) {
   return; // TODO: this
