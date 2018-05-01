@@ -1,19 +1,81 @@
 
 #include "lsimpute.h"
 
+#define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)
+
 #define BLOCKMAX 512 // TODO: set to 1024 if compute capability >= 2.0
 
 /* Sums the n floating point values in array A (in no particular order)
  * that are in natural log space
- *
+ * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
  */
 __device__ float reduce_logsum(float* A, int n) {
   return logf(420.0f); // TODO: This (for Cam)
 }
 
-__global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
-    float* fw, float* bw, float g, float theta) {
+/* Calculates log(exp(x) + exp(y))
+ */
+__device__ float d_logadd(float x, float y) {
+  return 0.0f; // TODO: this
+}
+
+/* Calculates log(1.0f - exp(x))
+ */
+__device__ float d_logsub1(float x) {
+  return 0.0f; // TODO: this
+}
+
+__device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
+    float* fw, float g, float theta, int nsnp, int nsample) {
+  // Initialize first row
+  float c = 1.0f / ((float)nsample);
+  for (int i = threadIdx.x; i < nsample; i += blockDim.x) fw[i] = c;
+
+  // For each iteration
+  for (int k = 1; k < nsnp; k++) {
+    int K = k * nsample;
+    // Precompute jump probability
+    float J = reduce_logsum(&(fw[K]), nsample);
+    J = J + d_logsub1(-1.0f * theta * dists[k]);
+    float nJ = d_logsub1(J);
+
+    // Calculate values
+    for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
+      float alpha = d_logadd(fw[K - nsample + i] + nJ, J + c);
+      fw[K + i] = alpha + EMISS(sample[k], refs[K+i],g);
+    }
+  }
   return; // TODO: this
+}
+
+__device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
+    float* bw, float g, float theta, int nsnp, int nsample) {
+  // Figure out responsibilities
+
+  // Initialize last row
+
+  // For each iteration
+    // Precompute jump probability
+    // Calculate values
+  return; // TODO: this
+}
+
+
+__device__ void smoothKernel(float* fw, float* bw, int nsnp, int nsample) {
+  return; // TODO: this
+}
+
+__global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
+    float* fw, float* bw, float g, float theta, int nsnp, int nsample) {
+  // Forward step
+  fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample);
+
+  // Backward step
+  bwKernel(refs, sample, dists, bw, g, theta, nsnp, nsample);
+
+  // Smoothing step
+  smoothKernel(fw, bw, nsnp, nsample);
+  return;
 }
 
 float* lsimputer::compute(uint8_t* snps) {
@@ -38,7 +100,8 @@ float* lsimputer::compute(uint8_t* snps) {
       cudaMemcpyHostToDevice);
 
   // Run the kernel
-  computeKernel<<<1, BLOCKMAX>>>(d_refs, d_sample, d_dists, d_fw, d_bw, g, theta);
+  computeKernel<<<1, BLOCKMAX>>>(d_refs, d_sample, d_dists, d_fw, d_bw, g,
+      theta, nsnp, nsample);
   cudaDeviceSynchronize();
 
   // Transfer data off the device

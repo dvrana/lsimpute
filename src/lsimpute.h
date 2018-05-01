@@ -18,6 +18,8 @@ public:
     // the internal ordering of the input genome.
     // For now, SNPs are represented using full 8-bit valued bitvectors. If
     // memory is a concern, we can fix this.
+    // ref has SNP-major order- the first nsample elements are SNP 0, then
+    // SNP 1, etc
     uint8_t* ref;
     float* dists;
 
