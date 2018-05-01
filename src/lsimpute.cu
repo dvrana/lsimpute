@@ -25,6 +25,15 @@ __device__ float d_logsub1(float x) {
   return 0.0f; // TODO: this
 }
 
+/* Normalizes the n floating point values in the array starting at A
+ * (sets A[i] = log(exp(A[i]) / exp(reduce_logsum(A,n))))
+ */
+__device__ void d_logrownorm(float* A, int n) {
+  float x = reduce_logsum(A, n);
+  for (int i = 0; i < n; i++) A[i] -= x;
+  return;
+}
+
 __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float g, float theta, int nsnp, int nsample) {
   // Initialize first row
@@ -74,9 +83,17 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   return;
 }
 
-
+/* Returns its smoothed answer in fw
+ */
 __device__ void smoothKernel(float* fw, float* bw, int nsnp, int nsample) {
-  return; // TODO: this
+  for (int i = 0; i < nsnp; i++) {
+    int I = i * nsample;
+    for (int j = 0; j < nsample; j++) {
+      fw[I + j] = fw[I + j] + bw[I + j];
+    }
+    d_logrownorm(&(fw[I]), nsample);
+  }
+  return;
 }
 
 __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
