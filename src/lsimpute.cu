@@ -31,7 +31,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   float c = 1.0f / ((float)nsample);
   for (int i = threadIdx.x; i < nsample; i += blockDim.x) fw[i] = c;
 
-  // For each iteration
+  // For each SNP (going forward)
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
@@ -45,19 +45,33 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
       fw[K + i] = alpha + EMISS(sample[k], refs[K+i],g);
     }
   }
-  return; // TODO: this
+  return;
 }
 
 __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* bw, float g, float theta, int nsnp, int nsample) {
-  // Figure out responsibilities
-
   // Initialize last row
+  float c = 1.0f / ((float)nsample);
+  for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
+    bw[(nsample * (nsnp - 1)) + i] =
+      c + EMISS(refs[nsample * (nsnp - 1) + i], sample[nsnp - 1], g);
+  }
 
-  // For each iteration
+  // For each SNP (going backward)
+  for (int k = nsnp - 2; k >= 0; k--) {
+    int K = k * nsample;
     // Precompute jump probability
+    float J = reduce_logsum(&(bw[K+nsample]),nsample);
+    J = J + d_logsub1(-1.0f * theta * dists[k]);
+    float nJ = d_logsub1(J);
+
     // Calculate values
-  return; // TODO: this
+    for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
+      float alpha = d_logadd(J + c, nJ + bw[K + i + nsample]);
+      bw[K + i] = alpha + EMISS(sample[k], refs[K+i], g);
+    }
+  }
+  return;
 }
 
 
