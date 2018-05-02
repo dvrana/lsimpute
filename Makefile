@@ -34,9 +34,9 @@ TEST_EX=$(TESTDIR)/$(TEST_EX_NAME)
 TEST_SCRIPT=tester.py
 
 # For every distinct "module", there should be an entry here.
-OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o #$(OBJDIR)/$(LSIMPUTE_CU).o
+OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(OBJDIR)/$(LSIMPUTE_CU).o
 
-.PHONY: dirs clean runtests debug
+.PHONY: dirs clean debug runtest
 
 $(EXECUTABLE): dirs $(OBJS) $(MAIN)
 	$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG=0 -o $@ $(OBJS) $(MAIN)
@@ -48,7 +48,7 @@ clean:
 	rm -rf $(EXECUTABLE) $(OBJDIR) $(TEST_EX)
 
 debug: DEBUG=1
-debug: $(TEST_EX) $(EXECUTABLE)
+debug: $(EXECUTABLE) $(TEST_EX)
 
 # For each distinct "module", there should be a rule here. For the most part,
 # the dependencies should be only the source and header files associated with
@@ -68,4 +68,7 @@ $(OBJS): dirs
 
 $(TEST_EX): $(OBJS)
 	cd $(TESTDIR) && $(MAKE) $(TEST_EX_NAME)
+
+runtest: $(TEST_EX)
+	cd $(TESTDIR) && ./$(TEST_EX_NAME)
 
