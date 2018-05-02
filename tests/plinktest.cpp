@@ -5,11 +5,11 @@
 #include "infrastructure.h"
 #include "lassert.h"
 
-const char* PED_TEST = "data/plinkdata.ped";
-const char* MAP_TEST = "data/plinkdata.map";
+const char* PED_TEST_01 = "data/01.ped";
+const char* MAP_TEST_01 = "data/01.map";
 
 void runPlinkBasicTest() {
-    genome_t g = g_fromfile(std::string(PED_TEST), std::string(MAP_TEST));
+    genome_t g = g_fromfile(std::string(PED_TEST_01), std::string(MAP_TEST_01));
 
     fprintf(stderr, "Loaded genome successfully.\n");
     ASSERT(g_nsample(g) == 2, "genome_t should report the correct nsample");
