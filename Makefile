@@ -1,10 +1,11 @@
 
 # infrastructure
-DEBUG=0
+DEBUG := 0
+
 OPT=O3
 CC=g++
 NVCC=nvcc
-CFLAGS=-std=c++11 -DDEBUG=$(DEBUG) -$(OPT)
+CFLAGS=-std=c++11 -$(OPT)
 NVCCFLAGS=-$(OPT) -m64 --gpu-architecture compute_61 -std=c++11
 OBJDIR=objs
 SRCDIR=src
@@ -26,20 +27,19 @@ HMM=$(OBJDIR)/$(LS).o
 
 LSIMPUTE_CU=lsimpute
 
-# Used by the testing infrastructure. Add every header file here.
 HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h
 
-TEST_H=$(TESTDIR)/testproto.h
-TEST_EX=$(TESTDIR)/test
+TEST_EX_NAME=tests
+TEST_EX=$(TESTDIR)/$(TEST_EX_NAME)
 TEST_SCRIPT=tester.py
 
 # For every distinct "module", there should be an entry here.
-OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LSIMPUTE_CU).o $(OBJDIR)/$(LS).o
+OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o #$(OBJDIR)/$(LSIMPUTE_CU).o
 
-.PHONY: dirs clean runtests
+.PHONY: dirs clean runtests debug
 
 $(EXECUTABLE): dirs $(OBJS) $(MAIN)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(MAIN)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG=0 -o $@ $(OBJS) $(MAIN)
 
 dirs:
 	mkdir -p $(OBJDIR)
@@ -47,28 +47,25 @@ dirs:
 clean:
 	rm -rf $(EXECUTABLE) $(OBJDIR) $(TEST_EX)
 
+debug: DEBUG=1
+debug: $(TEST_EX) $(EXECUTABLE)
+
 # For each distinct "module", there should be a rule here. For the most part,
 # the dependencies should be only the source and header files associated with
 # a given module.
 $(PLINKER): $(PLINKDIR)/genome.cpp $(PLINKDIR)/genome_c.h
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
 $(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu $(SRCDIR)/$(LSIMPUTE_CU).h
-	$(NVCC) $< $(NVCCFLAGS) -c -o $@
+	$(NVCC) $< $(NVCCFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
 $(HMM): $(HMMDIR)/ls.c $(HMMDIR)/ls.h $(PLINKDIR)/genome_c.h
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
 $(OBJS): dirs
 
 # Testing infrastructure
 
-$(TEST_EX): $(TEST_H) $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(TEST_EX).cpp
-
-$(TEST_H): $(HEADERS)
-	cd $(TESTDIR) && python3 gentesth.py $(HEADERS)
-
-runtests: $(TEST_EX)
-	cd $(TESTDIR) && python3 $(TEST_SCRIPT)
+$(TEST_EX): $(OBJS)
+	cd $(TESTDIR) && $(MAKE) $(TEST_EX_NAME)
 
