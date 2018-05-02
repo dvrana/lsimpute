@@ -8,6 +8,7 @@ OBJDIR=../objs
 TOBJDIR=scratch
 DEBUG=1
 CFLAGS=-std=c++11 -DDEBUG=1
+LDFLAGS=-L/usr/local/depot/cuda-8.0/lib64/ -lcudart
 
 TEST_EX=tests
 OBJS=$(OBJDIR)/*.o
@@ -23,7 +24,7 @@ dirs:
 	mkdir -p $(TOBJDIR)
 
 $(TEST_EX): $(TEST_EX).cpp infrastructure.h $(TOBJS)
-	$(CC) $< $(CFLAGS) -o $@ $(OBJS) $(TOBJS)
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(TOBJS)
 
 $(TOBJDIR)/%.o: %.cpp %.h dirs
 	$(CC) $< $(CFLAGS) -c -o $@
