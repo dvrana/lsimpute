@@ -42,7 +42,9 @@ void runThing(genome_t g, std::string id) {
         param[i] = snpmap[i].to_ulong();
     }
 
-    thing->compute(param);
+    float* P = thing->compute(param);
+
+    free(P);
 
     delete param;
 }
