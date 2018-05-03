@@ -12,7 +12,7 @@ void runPlinkBasicTest() {
     genome_t g = g_fromfile(std::string(PED_TEST_01), std::string(MAP_TEST_01));
 
     fprintf(stderr, "Loaded genome successfully.\n");
-    ASSERT(g_nsample(g) == 2, "genome_t should report the correct nsample");
+    ASSERT(g_nsample(g) == 4, "genome_t should report the correct nsample");
     ASSERT(g_nsnp(g) == 3, "genome_t should report the correct nsnp");
 
     auto s1 = g_plookup(g, (char *)"01_1_1");
