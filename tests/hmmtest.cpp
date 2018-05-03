@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <string>
 
 #include "../src/plinker/genome_c.h"
@@ -7,32 +8,39 @@
 #include "infrastructure.h"
 #include "lassert.h"
 
+#define EPSILON 0.000001 // 1e-6
+#define FEQ(x,y) x > y ? ((x - y) < EPSILON) : ((y - x) < EPSILON)
+
+const char* PED_TEST_02 = "data/02.ped";
+const char* MAP_TEST_02 = "data/02.map";
+
+const char* PED_TEST_03 = "data/03.ped";
+const char* MAP_TEST_03 = "data/03.map";
+
+// Takes a log-scaled float array n and returns its non-log sum
+float rowSum(float* A, int n) {
+  float x = 0.0f;
+  for (int i = 0; i < n; i++) x += exp(A[i]);
+  return x;
+}
+
 void runSeqHMMBasicTest() {
-    /*genome_t g = g_fromfile(std::string(PED_TEST_01), std::string(MAP_TEST_01));
+    genome_t ref = g_fromfile(std::string(PED_TEST_02), std::string(MAP_TEST_02));
+    genome_t sam = g_fromfile(std::string(PED_TEST_03), std::string(MAP_TEST_03));
 
     fprintf(stderr, "Loaded genome successfully.\n");
-    ASSERT(g_nsample(g) == 2, "genome_t should report the correct nsample");
-    ASSERT(g_nsnp(g) == 3, "genome_t should report the correct nsnp");
 
-    auto s1 = g_plookup(g, (char *)"01_1_1");
-    auto s2 = g_plookup(g, (char *)"01_1_2");
+    float* P =  ls(sam, std::string("03_03_1"), ref, 0.1f, 1.0f);
+    int nsnp = g_nsnp(sam);
+    int nref = g_nsample(ref);
 
-    ASSERT(s1 != NULL, "Unable to find left of sample.");
-    ASSERT(s2 != NULL, "Unable to find right of sample.");
-
-    fprintf(stderr, "Looked up sample successfully.\n");
-
-    ASSERT(s_query(s1[0], A), "first allele not correctly recorded");
-    ASSERT(s_query(s2[0], G), "second allele not correctly recorded");
-    ASSERT(s_query(s1[1], G), "second pair of alleles not recorded");
-    ASSERT(s_query(s2[1], G), "second pair of alleles not recorded");
-    ASSERT(s_query(s1[2], A), "last pair of alleles not recorded");
-    ASSERT(s_query(s2[2], C), "last pair of alleles not recorded");
-
-    auto s3 = g_plookup(g, (char*)"01_2_1");
-    fprintf(stderr, "Looked up sample successfully.\n");
-
-    ASSERT(s_query(s3[0], A), "failure in reading second sample");*/
+    for (int i = 0; i < g_nsnp(sam); i++) {
+      float x = rowSum(&(P[i * nref]),nref);
+      if (!FEQ(x,1.0f)) {
+        fprintf(stderr, "Row %d of results sums to %f\n",i, x);
+        ASSERT(false, "Row does not sum to 1!");
+      }
+    }
 }
 
 void exportBasicSeqHMMTests() {
