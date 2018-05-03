@@ -1,6 +1,6 @@
 
 # infrastructure
-DEBUG := 0
+DEBUG=1
 
 OPT=O3
 CC=g++
@@ -69,6 +69,6 @@ $(OBJS): dirs
 $(TEST_EX): $(OBJS)
 	cd $(TESTDIR) && $(MAKE) $(TEST_EX_NAME)
 
-runtest: $(TEST_EX)
+runtest: debug
 	cd $(TESTDIR) && ./$(TEST_EX_NAME)
 
