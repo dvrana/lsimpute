@@ -1,4 +1,5 @@
 
+#include <cuda.h>
 #include "lsimpute.h"
 
 #define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)

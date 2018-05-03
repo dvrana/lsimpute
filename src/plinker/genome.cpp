@@ -11,22 +11,29 @@
 #include <algorithm>
 #include <exception>
 
+#if DEBUG
+#include <cstdio>
+#define D_PRINTF(args...) fprintf(stderr, args)
+#else
+#define D_PRINTF(args...)
+#endif
+
 #define IFCHK(cond,onfail) if (!(cond)) { onfail; }
 #define ERROR(fname,ln,msg) std::cerr << (fname) << "." << (ln) << ":" << msg
 
-static inline int select(std::string s, std::string fname, int i) {
+static inline allele select(std::string s, std::string fname, int i) {
     switch (s[0]) {
       case 'A':
-        return 0;
+        return A;
       case 'C':
-        return 1;
+        return C;
       case 'G':
-        return 2;
+        return G;
       case 'T':
-        return 3;
+        return T;
       default:
         ERROR(fname, i, "invalid chromosome: " << s << std::endl);
-        return -1;
+        throw genomeErr("Unknown allele string.");
     }
 }
 
@@ -43,6 +50,16 @@ static inline int rselect(allele a) {
     }
 }
 
+static inline int search(
+    std::shared_ptr<std::string> arr, int n, std::string arg
+) {
+    std::string* arr_ = arr.get();
+    for (int i = 0 ; i < n ; i += 1) {
+        if (arr_[i] == arg) { return i; }
+    }
+    return -1;
+}
+
 int g_nsample(genome_t g) { return g->nsample; }
 int g_nsnp(genome_t g) { return (g->map).nsnp; }
 
@@ -56,7 +73,7 @@ void g_filterby(genome_t g, genome_t f) {
         // g++ on andrew...
         auto idx = gm.id_arr()[i];
         auto k = (*gm.data)[idx];
-        if (fm.sids.find(k.id) != fm.sids.end()) {
+        if (search(fm.sids, fm.nsnp, k.id) != -1) {
             keeps.push_back((*gm.data)[idx]);
         }
     }
@@ -68,12 +85,15 @@ void g_filterby(genome_t g, genome_t f) {
     (g->map).nsnp = nsnp;
     std::sort(keeps.begin(), keeps.end());
 
-    (g->map).sids.clear();
+    (g->map).sids = std::shared_ptr<std::string>(
+          new std::string[nsnp],
+          std::default_delete<std::string[]>()
+        );
     (g->map).ids = std::shared_ptr<int>
         (new int[nsnp], std::default_delete<int[]>());
 
     for (size_t i = 0 ; i < nsnp ; i += 1) {
-        (g->map).sids.insert(std::make_pair(keeps[i].id, i));
+        (g->map).sids.get()[i] = keeps[i].id;
         (g->map).id_arr()[keeps[i].ind] = i;
     }
 
@@ -115,7 +135,7 @@ void g_filterchrom(genome_t g, int chromosome) {
         (new int[nsnp], std::default_delete<int[]>());
 
     for (size_t i = 0 ; i < nsnp ; i += 1) {
-        (g->map).sids.insert(std::make_pair(keeps[i].id, i));
+        (g->map).sids.get()[i] = keeps[i].id;
         (g->map).id_arr()[keeps[i].ind] = i;
     }
 }
@@ -145,10 +165,10 @@ snp_t g_sidlookup(genome_t g, std::string pid, std::string sid) {
 
     if (snps == NULL) { throw genomeErr("pid not found"); }
 
-    auto index = (g->map).sids.find(sid);
-    if (index == (g->map).sids.end()) { throw genomeErr("sid not found"); }
+    auto index = search((g->map).sids, (g->map).nsnp, sid);
+    if (index == -1) { throw genomeErr("sid not found"); }
 
-    return snps[index->second];
+    return snps[index];
 }
 
 snp_t g_indlookup(genome_t g, std::string pid, int ind) {
@@ -160,7 +180,7 @@ snp_t g_indlookup(genome_t g, std::string pid, int ind) {
 }
 
 bool s_query(snp_t s, allele which) {
-    return s.test(rselect(which)) || s.test(rselect(which) + 4);
+    return s == which;
 }
 
 genome_t g_empty() {
@@ -232,11 +252,14 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         std::shared_ptr<int>(
                 new int[ln],
                 std::default_delete<int[]>());
+    (result->map).sids =
+        std::shared_ptr<std::string>(
+            new std::string[ln], std::default_delete<std::string[]>());
 
     for (int i = 0 ; i < ln ; i += 1) {
         auto s = (*data)[i];
         ids.get()[s.ind] = i;
-        (result->map).sids.insert(std::make_pair(s.id, i));
+        (result->map).sids.get()[i] = s.id;
     }
 
     (result->map).nsnp = nsnp;
@@ -274,23 +297,30 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         std::stringstream name;
         name << fid << "_" << iid;
 
-        auto smp = std::shared_ptr<snp_t>(new snp_t[nsnp]);
-        auto smpp = smp.get();
+        auto smp1 = std::shared_ptr<snp_t>(new snp_t[nsnp]);
+        auto smpp1 = smp1.get();
+        auto smp2 = std::shared_ptr<snp_t>(new snp_t[nsnp]);
+        auto smpp2 = smp2.get();
         for (int i = 0 ; i < nsnp ; i += 1) {
             std::string a1, a2;
 
-            smpp[i] = snp_t(0);
             lstr >> a1 >> a2;
 
-            int j;
+            allele j;
 
             if ((j = select(a1, pedname, ln)) == -1) { return NULL; }
-            smpp[i].set(j);
+            smpp1[i] = j;
             if ((j = select(a2, pedname, ln)) == -1) { return NULL; }
-            smpp[i].set(j+4);
+            smpp2[i] = j;
         }
 
-        (result->samples).insert(std::make_pair(name.str(), smp));
+        std::stringstream n1, n2;
+        n1 << name.str() << "_1";
+        n2 << name.str() << "_2";
+        (result->samples).insert(std::make_pair(n1.str(), smp1));
+        D_PRINTF("inserting sample name %s\n", n1.str().c_str());
+        (result->samples).insert(std::make_pair(n2.str(), smp2));
+        D_PRINTF("inserting sample name %s\n", n2.str().c_str());
     }
 
     result->nsample = ln;
