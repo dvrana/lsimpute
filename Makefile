@@ -16,6 +16,7 @@ LDFLAGS=-L/usr/local/depot/cuda-8.0/lib64/ -lcudart
 # Not particularly important, but useful if code structure changes
 PLINK=plinker
 LS=hmm
+IMPUTE=impute
 EXECUTABLE=lsimpute
 MAIN=$(SRCDIR)/$(EXECUTABLE).cpp
 
@@ -25,16 +26,19 @@ PLINKER=$(OBJDIR)/$(PLINK).o
 HMMDIR=$(SRCDIR)/$(LS)
 HMM=$(OBJDIR)/$(LS).o
 
+IMPUTERDIR=$(SRCDIR)/$(IMPUTE)
+IMPUTER=$(OBJDIR)/$(IMPUTE).o
+
 LSIMPUTE_CU=lsimpute
 
-HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h
+HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h $(IMPUTERDIR)/$(IMPUTER).h
 
 TEST_EX_NAME=tests
 TEST_EX=$(TESTDIR)/$(TEST_EX_NAME)
 TEST_SCRIPT=tester.py
 
 # For every distinct "module", there should be an entry here.
-OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(OBJDIR)/$(LSIMPUTE_CU).o
+OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(IMPUTER) $(OBJDIR)/$(LSIMPUTE_CU).o
 
 .PHONY: dirs clean debug runtest
 
@@ -56,11 +60,14 @@ debug: $(EXECUTABLE) $(TEST_EX)
 $(PLINKER): $(PLINKDIR)/genome.cpp $(PLINKDIR)/genome_c.h
 	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
-$(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu $(SRCDIR)/$(LSIMPUTE_CU).h
-	$(NVCC) $< $(NVCCFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
-
 $(HMM): $(HMMDIR)/ls.c $(HMMDIR)/ls.h $(PLINKDIR)/genome_c.h
 	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
+
+$(IMPUTER): $(IMPUTERDIR)/impute.c $(IMPUTERDIR)/impute.h $(PLINKDIR)/genome_c.h
+	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
+
+$(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu $(SRCDIR)/$(LSIMPUTE_CU).h
+	$(NVCC) $< $(NVCCFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
 $(OBJS): dirs
 
