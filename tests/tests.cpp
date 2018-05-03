@@ -5,6 +5,7 @@
 #include "infrastructure.h"
 
 #include "plinktest.h"
+#include "hmmtest.h"
 
 TestFactory alltests;
 
