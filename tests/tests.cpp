@@ -12,6 +12,7 @@ TestFactory alltests;
 // Export individual tests here!
 void setup(void) {
     exportBasicPlinkerTests();
+    exportBasicSeqHMMTests();
 }
 
 int main(void) {

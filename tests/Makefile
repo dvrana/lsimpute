@@ -12,7 +12,7 @@ LDFLAGS=-L/usr/local/depot/cuda-8.0/lib64/ -lcudart
 
 TEST_EX=tests
 OBJS=$(OBJDIR)/*.o
-TOBJS=$(TOBJDIR)/plinktest.o
+TOBJS=$(TOBJDIR)/plinktest.o $(TOBJDIR)/hmmtest.o
 
 .PHONY: all dirs
 
