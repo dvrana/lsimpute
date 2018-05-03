@@ -323,7 +323,7 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
         D_PRINTF("inserting sample name %s\n", n2.str().c_str());
     }
 
-    result->nsample = ln;
+    result->nsample = ln*2;
 
     // NOTE: fstreams don't need to be manually closed. thanks cpp destructors
     return result;

@@ -1,6 +1,6 @@
 
 # infrastructure
-DEBUG=1
+DEBUG=0
 
 OPT=O3
 CC=g++
