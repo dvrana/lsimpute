@@ -19,7 +19,7 @@ lsimputer::lsimputer(genome_t g) {
     for (auto entry : *g) {
         auto snpmap = entry.second;
         for (int i = 0 ; i < nsnp ; i += 1) {
-            ref[offs + i] = snpmap.get()[i].to_ulong();
+            ref[offs + i] = snpmap.get()[i];
         }
         offs += nsnp;
     }
@@ -39,7 +39,7 @@ void runThing(genome_t g, std::string id) {
     auto param = new uint8_t[nsnp];
 
     for (int i = 0 ; i < nsnp ; i += 1) {
-        param[i] = snpmap[i].to_ulong();
+        param[i] = snpmap[i];
     }
 
     float* P = thing->compute(param);

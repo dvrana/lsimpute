@@ -9,10 +9,9 @@
 #include <bitset>
 #include <iterator>
 
-// SNPs are stored as bitvectors in ACGT order
-typedef std::bitset<8> snp_t;
-
 enum allele { A, C, G, T };
+
+typedef allele snp_t;
 
 struct snpmeta {
     int ind; // index in mapfile ordering
@@ -31,7 +30,7 @@ struct snpmap {
     // maps index in mapfile to index in bp ordering
     std::shared_ptr<int> ids;
     // maps snp id string to index in bp ordering
-    std::map<std::string, int> sids;
+    std::shared_ptr<std::string> sids;
     // ordered in bp order
     std::shared_ptr<std::vector<struct snpmeta>> data;
 
