@@ -62,7 +62,7 @@ float* forward(genome_t sample, std::string id, genome_t ref, float g, float the
   // For each iteration
   for (int i = 1; i < n_snp; i++) {
     // Precompute jump probability
-    float J = logsum(&(fw[(i-1)* n_snp]),n_ref);
+    float J = logsum(&(fw[(i-1)* n_ref]),n_ref);
     J = J + logsub1(-1 * theta * g_rec_dist(ref, i-1));
     float nJ = logsub1(J);
 
@@ -105,7 +105,7 @@ float* backward(genome_t sample, std::string id, genome_t ref, float g, float th
   // For each iteration
   for (int i = n_snp - 2; i >= 0; i--) {
     // Precompute reverse jump probability
-    float J = logsum(&(bw[(i+1)* n_snp]),n_ref);
+    float J = logsum(&(bw[(i+1)* n_ref]),n_ref);
     J = J + logsub1(-1 * theta * g_rec_dist(ref, i));
     float nJ = logsub1(J);
 
