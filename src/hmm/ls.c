@@ -99,8 +99,8 @@ float* backward(genome_t sample, std::string id, genome_t ref, float g, float th
 
   // Initialize the last row
   float c = log(1.0f / ((float)n_ref)); // probability of jumping to given ref
-  for (int i = (n_snp - 1) * n_ref; i < (n_snp * n_ref); i++)
-    bw[i] = EMISS(s[n_snp - 1],S[i][n_snp - 1],g);
+  for (int i = 0; i < n_ref; i++)
+    bw[i + (n_snp - 1) * n_ref] = EMISS(s[n_snp - 1],S[i][n_snp - 1],g);
 
   // For each iteration
   for (int i = n_snp - 2; i >= 0; i--) {
