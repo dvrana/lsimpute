@@ -142,7 +142,7 @@ void g_filterchrom(genome_t g, int chromosome) {
 
 double g_rec_dist(genome_t g, int index) {
     auto m = g->map.data;
-    return ((*m)[index+1].gdist - (*m)[index].gdist) / 100;
+    return ((*m)[index+1].gdist - (*m)[index].gdist);
 }
 
 snp_t* g_plookup(genome_t g, std::string pid) {
