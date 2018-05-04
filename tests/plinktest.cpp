@@ -5,6 +5,9 @@
 #include "infrastructure.h"
 #include "lassert.h"
 
+#define EPSILON 0.000001 // 1e-6
+#define FEQ(x,y) (x > y ? ((x - y) < EPSILON) : ((y - x) < EPSILON))
+
 const char* PED_TEST_01 = "data/01.ped";
 const char* MAP_TEST_01 = "data/01.map";
 
@@ -34,6 +37,11 @@ void runPlinkBasicTest() {
     fprintf(stderr, "Looked up sample successfully.\n");
 
     ASSERT(s_query(s3[0], A), "failure in reading second sample");
+
+    fprintf(stderr,"%f\n",g_rec_dist(g, 0));
+
+    ASSERT(FEQ(g_rec_dist(g, 0), 0.6), "failure fetching genetic distance");
+    ASSERT(FEQ(g_rec_dist(g, 1), 0.2), "failure fetching genetic distance");
 }
 
 void exportBasicPlinkerTests() {
