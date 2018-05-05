@@ -45,7 +45,7 @@ __device__ float row_logsum(float* A, int n, float* scratch) {
   for (int s = 1 ; s < blockDim.x ; s <<= 1) {
     int index = 2*s*tid;
     if (index < blockDim.x) {
-      scratch[tid] = d_logadd(scratch[index], scratch[index+s]);
+      scratch[index] = d_logadd(scratch[index], scratch[index+s]);
     }
   }
   __syncthreads();
