@@ -38,8 +38,6 @@ void runPlinkBasicTest() {
 
     ASSERT(s_query(s3[0], A), "failure in reading second sample");
 
-    fprintf(stderr,"%f\n",g_rec_dist(g, 0));
-
     ASSERT(FEQ(g_rec_dist(g, 0), 0.6), "failure fetching genetic distance");
     ASSERT(FEQ(g_rec_dist(g, 1), 0.2), "failure fetching genetic distance");
 }
