@@ -4,7 +4,8 @@
 
 #define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)
 
-#define BLOCKMAX 1024 // TODO: set to 1024 if compute capability >= 2.0
+#define BLOCKMAX 512 // TODO: set to 1024 if compute capability >= 2.0
+#define WARP_SIZE 32
 
 /* Calculates log(exp(x) + exp(y))
  */
@@ -28,6 +29,7 @@ __device__ bool isPow2(int n) {
  * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
  */
 __device__ float row_logsum(float* A, int n, float* scratch) {
+  // Possible performance speedup: half our threads are idle on the first loop!
   int tid = threadIdx.x;
   int i = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -42,14 +44,21 @@ __device__ float row_logsum(float* A, int n, float* scratch) {
   }
   __syncthreads();
 
-  for (int s = blockDim.x/2 ; s > 0 ; s >>= 1) {
+  for (int s = blockDim.x/2 ; s > WARP_SIZE ; s >>= 1) {
     if (tid < s) {
       scratch[tid] = d_logadd(scratch[tid], scratch[tid+s]);
     }
     __syncthreads();
   }
-  __syncthreads();
 
+  if (tid < WARP_SIZE) {
+#pragma unroll
+    for (int j = WARP_SIZE ; j > 0 ; j >>= 1) {
+      scratch[tid] = d_logadd(scratch[tid], scratch[tid+j]);
+    }
+  }
+
+  __syncthreads();
   return scratch[0];
 }
 
