@@ -57,14 +57,14 @@ float* forward(genome_t sample, std::string id, genome_t ref, float g, float the
 
   // Initialize the first row
   float c = log(1.0f / ((float)n_ref)); // probability of jumping to given ref
-  for (int i = 0; i < n_ref; i++) fw[i] = c + EMISS(s[0], S[i][0], g);
+  for (int i = 0; i < n_ref; i++) fw[i] = EMISS(s[0], S[i][0], g);
 
   // For each iteration
   for (int i = 1; i < n_snp; i++) {
     // Precompute jump probability
-    float J = logsum(&(fw[(i-1)* n_ref]),n_ref);
-    J = J + logsub1(-1 * theta * g_rec_dist(ref, i-1));
-    float nJ = logsub1(J);
+    logrownorm(&(fw[(i-1)* n_ref]),n_ref);
+    float nJ = -1 * theta * g_rec_dist(ref, i-1);
+    float J = logsub1(nJ);
 
     // Calculate values
     for (int j = 0; j < n_ref; j++) {
@@ -105,14 +105,14 @@ float* backward(genome_t sample, std::string id, genome_t ref, float g, float th
   // For each iteration
   for (int i = n_snp - 2; i >= 0; i--) {
     // Precompute reverse jump probability
-    float J = logsum(&(bw[(i+1)* n_ref]),n_ref);
-    J = J + logsub1(-1 * theta * g_rec_dist(ref, i));
-    float nJ = logsub1(J);
+    logrownorm(&(bw[(i+1)* n_ref]),n_ref);
+    float nJ = -1 * theta * g_rec_dist(ref, i);
+    float J = logsub1(nJ);
 
     // Calculate values
     for (int j = 0; j < n_ref; j++) {
-      bw[i * n_ref + j] =
-        logadd(J + c, nJ + bw[(i+1) * n_ref + j]) + EMISS(s[i],S[j][i],g);
+      float alpha = logadd(J + c, nJ + bw[(i+1) * n_ref + j]);
+      bw[i * n_ref + j] = alpha + EMISS(s[i],S[j][i],g);
     }
   }
   return bw;

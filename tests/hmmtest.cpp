@@ -41,15 +41,28 @@ void runSeqHMMBasicTest() {
 
     /* For the below, the forward should be proportional to
      * [0.3214285714285714, 0.3214285714285714, 0.3214285714285714, 0.03571428571428571]
-     * [0.04857252084793024, 0.4371526876313721, 0.4371526876313721, 0.07712210388932551]
-     * [0.01606695280077814, 0.7175140083438533, 0.07972377870487259, 0.18669526015049598]
-     * [0.005144151247723374, 0.8488864336559665, 0.11913289807045467, 0.02683651702585534]
+     * [0.048532109899404895, 0.436788989094644, 0.436788989094644, 0.07788991191130712]
+     * [0.01668948789147723, 0.7115906893757763, 0.07906563215286405, 0.1926541905798823]
+     * [0.005474670956529986, 0.8458619051087488, 0.12077602266265874, 0.027887401272062663]
+     *
+     * and backward to
+     * [0.03486421210153343, 0.7867259437664135, 0.15709310523136097, 0.021316738900692092]
+     * [0.006624653674670816, 0.7165021824634252, 0.12202824578123218, 0.15484491808067163]
+     * [0.013806503278561623, 0.7757414704929454, 0.08619349672143839, 0.1242585295070546]
+     * [0.05, 0.45, 0.45, 0.05]
+     *
+     * P should equal
+     * [0.007682004169127661, 0.8308619624778509, 0.14150498107198667, 0.019951052281034633]
+     * [0.001732168759242964, 0.8759231805429016, 0.0973247978381002, 0.025019852859755082]
+     * [0.0022783504437034583, 0.874279472249249, 0.09714216358324991, 0.026300013723797623]
+     * [0.0054746709565299855, 0.8458619051087486, 0.12077602266265872, 0.027887401272062656]
      */
 
     float* P =  ls(sam, std::string("03_3_1"), ref, 0.1f, 1.0f);
     int nsnp = g_nsnp(sam);
     int nref = g_nsample(ref);
 
+    // Test row sums
     for (int i = 0; i < nsnp; i++) {
       float x = rowSum(&(P[i * nref]),nref);
       if (!FEQ(x,1.0f)) {
@@ -58,7 +71,42 @@ void runSeqHMMBasicTest() {
       }
     }
 
-    printLogMat(P, nsnp, nref);
+    // Test smoothed values
+    ASSERT(FEQ(exp(P[0]),0.007682004169127661),
+        "Seq HMM result at (0,0) incorrect!");
+    ASSERT(FEQ(exp(P[1]),0.8308619624778509),
+        "Seq HMM result at (1,1) incorrect!");
+    ASSERT(FEQ(exp(P[2]),0.14150498107198667),
+        "Seq HMM result at (1,2) incorrect!");
+    ASSERT(FEQ(exp(P[3]),0.019951052281034633),
+        "Seq HMM result at (1,3) incorrect!");
+
+    ASSERT(FEQ(exp(P[4]),0.001732168759242964),
+        "Seq HMM result at (2,0) incorrect!");
+    ASSERT(FEQ(exp(P[5]),0.8759231805429016),
+        "Seq HMM result at (2,1) incorrect!");
+    ASSERT(FEQ(exp(P[6]),0.0973247978381002),
+        "Seq HMM result at (2,2) incorrect!");
+    ASSERT(FEQ(exp(P[7]),0.025019852859755082),
+        "Seq HMM result at (2,3) incorrect!");
+
+    ASSERT(FEQ(exp(P[8]),0.0022783504437034583),
+        "Seq HMM result at (3,0) incorrect!");
+    ASSERT(FEQ(exp(P[9]),0.874279472249249),
+        "Seq HMM result at (3,1) incorrect!");
+    ASSERT(FEQ(exp(P[10]),0.09714216358324991),
+        "Seq HMM result at (3,2) incorrect!");
+    ASSERT(FEQ(exp(P[11]),0.026300013723797623),
+        "Seq HMM result at (3,3) incorrect!");
+
+    ASSERT(FEQ(exp(P[12]),0.005474670956529986),
+        "Seq HMM result at (3,0) incorrect!");
+    ASSERT(FEQ(exp(P[13]),0.8458619051087488),
+        "Seq HMM result at (3,1) incorrect!");
+    ASSERT(FEQ(exp(P[14]),0.12077602266265874),
+        "Seq HMM result at (3,2) incorrect!");
+    ASSERT(FEQ(exp(P[15]),0.027887401272062663),
+        "Seq HMM result at (3,3) incorrect!");
 }
 
 void exportBasicSeqHMMTests() {
