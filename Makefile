@@ -79,3 +79,5 @@ $(TEST_EX): $(OBJS)
 runtest: debug
 	cd $(TESTDIR) && ./$(TEST_EX_NAME)
 
+test: runtest
+
