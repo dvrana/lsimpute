@@ -273,8 +273,8 @@ genome_t g_fromfile(std::string pedname, std::string mapname) {
     while (std::getline(ped, line)) {
         ln += 1;
         std::stringstream lstr(line);
-        std::string fid;
-        int iid, ptid, mtid, sx, ptype;
+        std::string fid, iid;
+        int ptid, mtid, sx, ptype;
         IFCHK(lstr >> fid,
                 ERROR(pedname, ln, "parse error\n");
                 return NULL);

@@ -18,8 +18,8 @@ void runPlinkBasicTest() {
     ASSERT(g_nsample(g) == 4, "genome_t should report the correct nsample");
     ASSERT(g_nsnp(g) == 3, "genome_t should report the correct nsnp");
 
-    auto s1 = g_plookup(g, (char *)"01_1_1");
-    auto s2 = g_plookup(g, (char *)"01_1_2");
+    auto s1 = g_plookup(g, (char *)"01_01_1");
+    auto s2 = g_plookup(g, (char *)"01_01_2");
 
     ASSERT(s1 != NULL, "Unable to find left of sample.");
     ASSERT(s2 != NULL, "Unable to find right of sample.");
@@ -33,7 +33,7 @@ void runPlinkBasicTest() {
     ASSERT(s_query(s1[2], A), "last pair of alleles not recorded");
     ASSERT(s_query(s2[2], C), "last pair of alleles not recorded");
 
-    auto s3 = g_plookup(g, (char*)"01_2_1");
+    auto s3 = g_plookup(g, (char*)"01_02_1");
     fprintf(stderr, "Looked up sample successfully.\n");
 
     ASSERT(s_query(s3[0], A), "failure in reading second sample");

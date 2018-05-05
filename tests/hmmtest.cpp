@@ -58,7 +58,7 @@ void runSeqHMMBasicTest() {
      * [0.0054746709565299855, 0.8458619051087486, 0.12077602266265872, 0.027887401272062656]
      */
 
-    float* P =  ls(sam, std::string("03_3_1"), ref, 0.1f, 1.0f);
+    float* P =  ls(sam, std::string("03_03_1"), ref, 0.1f, 1.0f);
     int nsnp = g_nsnp(sam);
     int nref = g_nsample(ref);
 
