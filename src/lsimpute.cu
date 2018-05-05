@@ -6,31 +6,71 @@
 
 #define BLOCKMAX 512 // TODO: set to 1024 if compute capability >= 2.0
 
-/* Sums the n floating point values in array A (in no particular order)
- * that are in natural log space
- * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
- */
-__device__ float reduce_logsum(float* A, int n) {
-  return logf(420.0f); // TODO: This (for Cam)
-}
-
 /* Calculates log(exp(x) + exp(y))
  */
 __device__ float d_logadd(float x, float y) {
-  return 0.0f; // TODO: this
+  if (y > x) { return d_logadd(y,x); }
+  return x + logf(1+expf(y-x));
 }
 
 /* Calculates log(1.0f - exp(x))
  */
 __device__ float d_logsub1(float x) {
-  return 0.0f; // TODO: this
+  return logf(1.0f - expf(x));
+}
+
+template <unsigned int blockSize>
+__device__ void reduce(float* A_idata, float* A_odata, int n) {
+  extern __shared__ int sdata[];
+  unsigned int tid = threadIdx.x;
+  unsigned int i = blockIdx.x*(blockSize*2) + tid;
+  unsigned int gridSize = blockSize*2*gridDim.x;
+  sdata[tid] = 0;
+  while (i<n) {
+    sdata[tid] = d_logadd(
+        sdata[tid], d_logadd(A_idata[i], A_idata[i+blockSize]));
+    i += gridSize;
+  }
+  __syncthreads();
+
+  if (blockSize >= 512) {
+    if (tid < 256) { sdata[tid] = d_logadd(sdata[tid],sdata[tid+256]); }
+    __syncthreads();
+  }
+  if (blockSize >= 256) {
+    if (tid < 128) { sdata[tid] = d_logadd(sdata[tid],sdata[tid+128]); }
+    __syncthreads();
+  }
+  if (blockSize >= 128) {
+    if (tid < 64) { sdata[tid] = d_logadd(sdata[tid],sdata[tid+64]); }
+    __syncthreads();
+  }
+
+  if (tid < 32) {
+    if (blockSize >= 64) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+32]); }
+    if (blockSize >= 32) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+16]); }
+    if (blockSize >= 16) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+8]); }
+    if (blockSize >= 8) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+4]); }
+    if (blockSize >= 4) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+2]); }
+    if (blockSize >= 2) { sdata[tid] = d_logadd(sdata[tid], sdata[tid+1]); }
+  }
+
+  if (tid == 0) { A_odata[blockIdx.x] = sdata[0]; }
+}
+
+/* Sums the n floating point values in array A (in no particular order)
+ * that are in natural log space
+ * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
+ */
+__device__ float row_logsum(float* A, int n) {
+  return logf(420.0f);
 }
 
 /* Normalizes the n floating point values in the array starting at A
  * (sets A[i] = log(exp(A[i]) / exp(reduce_logsum(A,n))))
  */
 __device__ void d_logrownorm(float* A, int n) {
-  float x = reduce_logsum(A, n);
+  float x = row_logsum(A, n);
   for (int i = 0; i < n; i++) A[i] -= x;
   return;
 }
@@ -45,7 +85,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
-    float J = reduce_logsum(&(fw[K]), nsample);
+    float J = row_logsum(&(fw[K]), nsample);
     J = J + d_logsub1(-1.0f * theta * dists[k]);
     float nJ = d_logsub1(J);
 
@@ -71,7 +111,7 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = nsnp - 2; k >= 0; k--) {
     int K = k * nsample;
     // Precompute jump probability
-    float J = reduce_logsum(&(bw[K+nsample]),nsample);
+    float J = row_logsum(&(bw[K+nsample]),nsample);
     J = J + d_logsub1(-1.0f * theta * dists[k]);
     float nJ = d_logsub1(J);
 
@@ -132,7 +172,7 @@ float* lsimputer::compute(uint8_t* snps) {
       cudaMemcpyHostToDevice);
 
   // Run the kernel
-  computeKernel<<<1, BLOCKMAX>>>(d_refs, d_sample, d_dists, d_fw, d_bw, g,
+  computeKernel<<<1, BLOCKMAX, >>>(d_refs, d_sample, d_dists, d_fw, d_bw, g,
       theta, nsnp, nsample);
   cudaDeviceSynchronize();
 
