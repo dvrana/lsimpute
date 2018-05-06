@@ -113,7 +113,58 @@ void runGPUHMMBasicTest() {
   genome_t ref = g_fromfile(std::string(PED_TEST_02), std::string(MAP_TEST_02));
   genome_t sam = g_fromfile(std::string(PED_TEST_03), std::string(MAP_TEST_03));
 
-  float* P = runThing(ref, sam, "03_03_1", 12);
+  int nsample = g_nsample(ref);
+  int nsnp = g_nsnp(ref);
+
+  float* P = runThing(ref, sam, std::string("03_03_1"), 12);
+
+  printLogMat(P, nsnp, nsample);
+
+  // Test row sums
+  for (int i = 0; i < nsnp; i++) {
+    float x = rowSum(&(P[i * nsample]),nsample);
+    if (!FEQ(x,1.0f)) {
+      fprintf(stderr, "Row %d of results sums to %f\n",i, x);
+      ASSERT(false, "Row does not sum to 1!");
+    }
+  }
+
+  // Test smoothed values
+  ASSERT(FEQ(exp(P[0]),0.007682004169127661),
+      "GPU HMM result at (0,0) incorrect!");
+  ASSERT(FEQ(exp(P[1]),0.8308619624778509),
+      "GPU HMM result at (1,1) incorrect!");
+  ASSERT(FEQ(exp(P[2]),0.14150498107198667),
+      "GPU HMM result at (1,2) incorrect!");
+  ASSERT(FEQ(exp(P[3]),0.019951052281034633),
+      "GPU HMM result at (1,3) incorrect!");
+
+  ASSERT(FEQ(exp(P[4]),0.001732168759242964),
+      "GPU HMM result at (2,0) incorrect!");
+  ASSERT(FEQ(exp(P[5]),0.8759231805429016),
+      "GPU HMM result at (2,1) incorrect!");
+  ASSERT(FEQ(exp(P[6]),0.0973247978381002),
+      "GPU HMM result at (2,2) incorrect!");
+  ASSERT(FEQ(exp(P[7]),0.025019852859755082),
+      "GPU HMM result at (2,3) incorrect!");
+
+  ASSERT(FEQ(exp(P[8]),0.0022783504437034583),
+      "GPU HMM result at (3,0) incorrect!");
+  ASSERT(FEQ(exp(P[9]),0.874279472249249),
+      "GPU HMM result at (3,1) incorrect!");
+  ASSERT(FEQ(exp(P[10]),0.09714216358324991),
+      "GPU HMM result at (3,2) incorrect!");
+  ASSERT(FEQ(exp(P[11]),0.026300013723797623),
+      "GPU HMM result at (3,3) incorrect!");
+
+  ASSERT(FEQ(exp(P[12]),0.005474670956529986),
+      "GPU HMM result at (3,0) incorrect!");
+  ASSERT(FEQ(exp(P[13]),0.8458619051087488),
+      "GPU HMM result at (3,1) incorrect!");
+  ASSERT(FEQ(exp(P[14]),0.12077602266265874),
+      "GPU HMM result at (3,2) incorrect!");
+  ASSERT(FEQ(exp(P[15]),0.027887401272062663),
+      "GPU HMM result at (3,3) incorrect!");
 }
 
 void exportBasicHMMTests() {
