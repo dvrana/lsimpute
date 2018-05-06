@@ -39,7 +39,7 @@ TEST_EX=$(TESTDIR)/$(TEST_EX_NAME)
 TEST_SCRIPT=tester.py
 
 # For every distinct "module", there should be an entry here.
-OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(IMPUTER) $(OBJDIR)/$(LSIMPUTE_CU).o
+OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(IMPUTER) $(OBJDIR)/$(LSIMPUTE_CU).o $(OBJDIR)/$(LSLIB).o
 
 .PHONY: dirs clean debug runtest
 

@@ -4,9 +4,12 @@
 
 #include <memory>
 
-lsimputer::lsimputer(genome_t G, float g, float theta) {
+lsimputer::lsimputer(genome_t G, float g_, float theta_) {
     nsnp = g_nsnp(G);
     nsample = g_nsample(G);
+
+    g = g_;
+    theta = theta_;
 
     dists = new float[nsnp-1];
     ref = new uint8_t[nsnp * nsample];

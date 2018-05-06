@@ -27,7 +27,7 @@ public:
     float g;
     float theta;
 
-    lsimputer(genome_t g);
+    lsimputer(genome_t G, float g_, float theta_);
 
     ~lsimputer();
 
