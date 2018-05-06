@@ -109,11 +109,23 @@ void runSeqHMMBasicTest() {
         "Seq HMM result at (3,3) incorrect!");
 }
 
-void exportBasicSeqHMMTests() {
+void runGPUHMMBasicTest() {
+  genome_t ref = g_fromfile(std::string(PED_TEST_02), std::string(MAP_TEST_02));
+  genome_t sam = g_fromfile(std::string(PED_TEST_03), std::string(MAP_TEST_03));
+
+  float* P = runThing(ref, sam, "03_03_1", 12);
+}
+
+void exportBasicHMMTests() {
     auto basicTest = new TestCase();
     basicTest->name = (char*)"Basic Sequential HMM Functionality";
     basicTest->run = &runSeqHMMBasicTest;
 
+    auto gpuTest = new TestCase();
+    gpuTest->name = (char*)"Basic GPU HMM Functionality";
+    gpuTest->run = &runGPUHMMBasicTest;
+
     alltests.registerTest(basicTest);
+    alltests.registerTest(gpuTest);
 }
 

@@ -31,11 +31,12 @@ lsimputer::~lsimputer() {
 }
 
 // TODO: clean this up
-void runThing(genome_t g, std::string id) {
+// TODO: make this return multiple things or reuse data structures
+float* runThing(genome_t g, genome_t impute, std::string id, int chr) {
     auto thing = std::shared_ptr<lsimputer>(new lsimputer(g));
 
     auto nsnp = g_nsnp(g);
-    auto snpmap = g_plookup(g, id);
+    auto snpmap = g_plookup(impute, id);
     auto param = new uint8_t[nsnp];
 
     for (int i = 0 ; i < nsnp ; i += 1) {

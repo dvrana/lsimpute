@@ -1,3 +1,3 @@
 
-void exportBasicSeqHMMTests();
+void exportBasicHMMTests();
 
