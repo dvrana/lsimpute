@@ -82,15 +82,9 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
-<<<<<<< HEAD
-    int J = row_logsum(&(fw[K]), nsample, scratch);
-    J = J + d_logsub1(-1.0f * theta * dists[k]);
-    float nJ = d_logsub1(J);
-=======
-    float x = reduce_logsum(&(fw[K-nsample]), nsample);
+    float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
->>>>>>> gpunorm
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
@@ -115,15 +109,9 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = nsnp - 2; k >= 0; k--) {
     int K = k * nsample;
     // Precompute jump probability
-<<<<<<< HEAD
-    float J = row_logsum(&(bw[K+nsample]),nsample, scratch);
-    J = J + d_logsub1(-1.0f * theta * dists[k]);
-    float nJ = d_logsub1(J);
-=======
-    float x = reduce_logsum(&(bw[K+nsample]), nsample);
+    float x = row_logsum(&(bw[K+nsample]), nsample, scratch);
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
->>>>>>> gpunorm
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
