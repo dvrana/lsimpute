@@ -1,5 +1,6 @@
 
 #include <cuda.h>
+#include <math_constants.h>
 #include "lsimpute.h"
 
 #define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)
@@ -31,15 +32,16 @@ __device__ bool isPow2(int n) {
 __device__ float row_logsum(float* A, int n, float* scratch) {
   // Possible performance speedup: half our threads are idle on the first loop!
   int tid = threadIdx.x;
+  int nthread = blockDim.x;
   int i = blockIdx.x*blockDim.x + threadIdx.x;
 
-  int elts = n / BLOCKMAX + (tid < n % BLOCKMAX);
+  int elts = n / nthread + (tid < n % nthread);
 
   // With sample sizes being single-digit multiples of BLOCKMAX (at least at
   // the moment), we can get away with doing this linearly. As sample sizes
   // get larger, we'll need to start looking into recursive kernel invocation.
   scratch[tid] = A[i];
-  for (int j = 1 ; j < elts ; j += 1) {
+  for (int j = 1 ; j < elts && i+j < n ; j += 1) {
     scratch[tid] = d_logadd(scratch[tid], A[i+j]);
   }
   __syncthreads();
@@ -52,7 +54,7 @@ __device__ float row_logsum(float* A, int n, float* scratch) {
   }
 
   if (tid < WARP_SIZE) {
-#pragma unroll
+    #pragma unroll
     for (int j = WARP_SIZE ; j > 0 ; j >>= 1) {
       scratch[tid] = d_logadd(scratch[tid], scratch[tid+j]);
     }
@@ -82,7 +84,6 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
-    return;
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
@@ -126,6 +127,17 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   return;
 }
 
+__device__ __host__
+int npow2(int n) {
+  n -= 1;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n+1;
+}
+
 /* Returns its smoothed answer in fw
  */
 __device__ void smoothKernel(
@@ -143,6 +155,13 @@ __device__ void smoothKernel(
 __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float* bw, float g, float theta, int nsnp, int nsample) {
   extern __shared__ float scratch[];
+
+  if (threadIdx.x == 0) {
+    for (int i = 0 ; i < blockDim.x ; i += 1) {
+      scratch[i] = __int_as_float(0xff800000);
+    }
+  }
+
   // Forward step
   fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample, scratch);
   return;
@@ -176,8 +195,10 @@ float* lsimputer::compute(uint8_t* snps) {
   cudaMemcpy(d_dists, dists, sizeof(float) * nsnp,
       cudaMemcpyHostToDevice);
 
+  int nthread = npow2(min(BLOCKMAX, max(nsample, 32)));
+
   // Run the kernel
-  computeKernel<<<1, BLOCKMAX, nsample*sizeof(float)>>>
+  computeKernel<<<1, nthread, nthread*sizeof(float)>>>
     (d_refs, d_sample, d_dists, d_fw,
       d_bw, g, theta, nsnp, nsample);
   cudaDeviceSynchronize();
