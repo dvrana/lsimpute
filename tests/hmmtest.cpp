@@ -116,7 +116,7 @@ void runGPUHMMBasicTest() {
   int nsample = g_nsample(ref);
   int nsnp = g_nsnp(ref);
 
-  float* P = runThing(ref, sam, std::string("03_03_1"), 12);
+  float* P = runThing(ref, sam, std::string("03_03_1"), 12, 0.1, 1.0);
 
   printLogMat(P, nsnp, nsample);
 
