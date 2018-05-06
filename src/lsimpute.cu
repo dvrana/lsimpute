@@ -82,6 +82,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
+    return;
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
@@ -144,13 +145,14 @@ __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
   extern __shared__ float scratch[];
   // Forward step
   fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample, scratch);
+  return;
 
-  // Backward step
+  /*// Backward step
   bwKernel(refs, sample, dists, bw, g, theta, nsnp, nsample, scratch);
 
   // Smoothing step
   smoothKernel(fw, bw, nsnp, nsample, scratch);
-  return;
+  return;*/
 }
 
 float* lsimputer::compute(uint8_t* snps) {
