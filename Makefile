@@ -18,7 +18,7 @@ PLINK=plinker
 LS=hmm
 IMPUTE=impute
 EXECUTABLE=lsimpute
-MAIN=$(SRCDIR)/$(EXECUTABLE).cpp
+MAIN=$(SRCDIR)/main.cpp
 
 PLINKDIR=$(SRCDIR)/$(PLINK)
 PLINKER=$(OBJDIR)/$(PLINK).o
@@ -30,6 +30,7 @@ IMPUTERDIR=$(SRCDIR)/$(IMPUTE)
 IMPUTER=$(OBJDIR)/$(IMPUTE).o
 
 LSIMPUTE_CU=lsimpute
+LSLIB=lslib
 
 HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h $(IMPUTERDIR)/$(IMPUTER).h
 
@@ -69,11 +70,14 @@ $(IMPUTER): $(IMPUTERDIR)/impute.c $(IMPUTERDIR)/impute.h $(PLINKDIR)/genome_c.h
 $(OBJDIR)/$(LSIMPUTE_CU).o: $(SRCDIR)/$(LSIMPUTE_CU).cu $(SRCDIR)/$(LSIMPUTE_CU).h
 	$(NVCC) $< $(NVCCFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
 
+$(OBJDIR)/$(LSLIB).o: $(SRCDIR)/$(LSIMPUTE_CU).cpp $(SRCDIR)/$(LSIMPUTE_CU).h
+	$(CC) $< $(CFLAGS) -c -o $@ -DDEBUG=$(DEBUG)
+
 $(OBJS): dirs
 
 # Testing infrastructure
 
-$(TEST_EX): $(OBJS)
+$(TEST_EX): $(OBJS) $(OBJDIR)/$(LSLIB).o
 	cd $(TESTDIR) && $(MAKE) $(TEST_EX_NAME)
 
 runtest: debug
