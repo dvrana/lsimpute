@@ -50,7 +50,3 @@ float* runThing(genome_t g, genome_t impute, std::string id, int chr) {
     delete param;
 }
 
-int main() {
-    return 0;
-}
-
