@@ -85,6 +85,8 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     int K = k * nsample;
     // Precompute jump probability
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
+    printf("%f\n",x);
+    return;
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
 
