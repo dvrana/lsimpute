@@ -11,8 +11,9 @@
 /* Calculates log(exp(x) + exp(y))
  */
 __device__ float d_logadd(float x, float y) {
+  //return x+y;
   if (y > x) { return d_logadd(y,x); }
-  return x + logf(1+expf(y-x));
+  return x + logf(1.0f+expf(y-x));
 }
 
 /* Calculates log(1.0f - exp(x))
@@ -25,17 +26,30 @@ __device__ bool isPow2(int n) {
   return (n != 0) && (n & (n-1)) == 0;
 }
 
+__device__ __host__
+int npow2(int n) {
+  n -= 1;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n+1;
+}
+
 /* Sums the n floating point values in array A (in no particular order)
  * that are in natural log space
  * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
  */
 __device__ float row_logsum(float* A, int n, float* scratch) {
+  n = npow2(n);
   // Possible performance speedup: half our threads are idle on the first loop!
   int tid = threadIdx.x;
   int nthread = blockDim.x;
-  int i = blockIdx.x*blockDim.x + threadIdx.x;
+  int fakeelts = n / nthread;
 
-  int elts = n / nthread + (tid < n % nthread);
+  int i = blockIdx.x*blockDim.x + (fakeelts * tid) + min(n % nthread, tid);
+  int elts = fakeelts + (tid < n % nthread);
 
   // With sample sizes being single-digit multiples of BLOCKMAX (at least at
   // the moment), we can get away with doing this linearly. As sample sizes
@@ -46,17 +60,20 @@ __device__ float row_logsum(float* A, int n, float* scratch) {
   }
   __syncthreads();
 
-  for (int s = blockDim.x/2 ; s > WARP_SIZE ; s >>= 1) {
-    if (tid < s) {
+  int big = n > WARP_SIZE;
+
+  for (int s = nthread/2 ; s > WARP_SIZE*big ; s >>= 1) {
+    if (tid < s && tid+s < n) {
       scratch[tid] = d_logadd(scratch[tid], scratch[tid+s]);
     }
     __syncthreads();
   }
 
-  if (tid < WARP_SIZE) {
+  if (tid < WARP_SIZE && big) {
     #pragma unroll
     for (int j = WARP_SIZE ; j > 0 ; j >>= 1) {
-      scratch[tid] = d_logadd(scratch[tid], scratch[tid+j]);
+      if (tid+j < n)
+        scratch[tid] = d_logadd(scratch[tid], scratch[tid+j]);
     }
   }
 
@@ -85,7 +102,6 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     int K = k * nsample;
     // Precompute jump probability
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
-    printf("%f\n",x);
     return;
     float nJ = -1.0f * theta * dists[k];
     float J = d_logsub1(nJ);
@@ -129,17 +145,6 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   return;
 }
 
-__device__ __host__
-int npow2(int n) {
-  n -= 1;
-  n |= n >> 1;
-  n |= n >> 2;
-  n |= n >> 4;
-  n |= n >> 8;
-  n |= n >> 16;
-  return n+1;
-}
-
 /* Returns its smoothed answer in fw
  */
 __device__ void smoothKernel(
@@ -155,14 +160,11 @@ __device__ void smoothKernel(
 }
 
 __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
-    float* fw, float* bw, float g, float theta, int nsnp, int nsample) {
+    float* fw, float* bw, float g, float theta, int nsnp, int nsample,
+    int nscratch) {
   extern __shared__ float scratch[];
 
-  if (threadIdx.x == 0) {
-    for (int i = 0 ; i < blockDim.x ; i += 1) {
-      scratch[i] = __int_as_float(0xff800000);
-    }
-  }
+  __syncthreads();
 
   // Forward step
   fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample, scratch);
@@ -198,11 +200,12 @@ float* lsimputer::compute(uint8_t* snps) {
       cudaMemcpyHostToDevice);
 
   int nthread = npow2(min(BLOCKMAX, max(nsample, 32)));
+  int nscratch = max(nthread, npow2(nsample));
 
   // Run the kernel
-  computeKernel<<<1, nthread, nthread*sizeof(float)>>>
+  computeKernel<<<1, nthread, nscratch*sizeof(float)>>>
     (d_refs, d_sample, d_dists, d_fw,
-      d_bw, g, theta, nsnp, nsample);
+      d_bw, g, theta, nsnp, nsample, nscratch);
   cudaDeviceSynchronize();
 
   // Transfer data off the device
