@@ -45,8 +45,7 @@ float* runThing(genome_t g, genome_t impute, std::string id, int chr) {
 
     float* P = thing->compute(param);
 
-    free(P);
-
     delete param;
+    return P;
 }
 
