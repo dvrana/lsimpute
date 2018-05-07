@@ -5,9 +5,9 @@
 
 from random import choice, randrange, random
 
-nsnp = 10
-nref = 10
-nsam = 10
+nsnp = 60000
+nref = 2500
+nsam = 1
 refname = "ref"
 samname = "sam"
 
@@ -30,21 +30,25 @@ for i in range(nsnp):
     rsid = 'rs' + str(randrange(1000000000))
   snps.append(['1', rsid, str(mapdist), str(bp) ,a1, a2])
 
+print("Generated map")
+
 # Generate sample ped
-sped = []
+sped = [[str(i), str(i), '0', '0', '0', '0'] for i in range(nsam)]
 for i in range(nsam):
-  sped.append([str(i), str(i), '0', '0', '0', '0'])
   for j in range(nsnp):
-    sped[i].append(choice(snps[j][4:]))
-    sped[i].append(choice(snps[j][4:]))
+    sped[i].append(snps[j][4 + randrange(2)])
+    sped[i].append(snps[j][4 + randrange(2)])
+
+print("Generated sample ped")
 
 # Generate reference ped
-rped = []
-for i in range(nsam):
-  rped.append([str(i), str(i), '0', '0', '0', '0'])
+rped = [[str(i), str(i), '0', '0', '0', '0'] for i in range(nref)]
+for i in range(nref):
   for j in range(nsnp):
-    rped[i].append(choice(snps[j][4:]))
-    rped[i].append(choice(snps[j][4:]))
+    rped[i].append(snps[j][4 + randrange(2)])
+    rped[i].append(snps[j][4 + randrange(2)])
+
+print("Generated reference ped")
 
 # Write map files
 with open(refname + '.map','w') as f:
@@ -55,6 +59,8 @@ with open(samname + '.map','w') as f:
   for line in snps:
     f.write(' '.join(line[:4]) + '\n')
 
+print("Written maps")
+
 # Write ped files
 with open(refname + '.ped','w') as f:
   for line in rped:
@@ -63,3 +69,5 @@ with open(refname + '.ped','w') as f:
 with open(samname + '.ped','w') as f:
   for line in sped:
     f.write(' '.join(line) + '\n')
+
+print("Written peds")
