@@ -1,6 +1,7 @@
 
 # infrastructure
 DEBUG=0
+BENCH=0
 
 OPT=O3
 CC=g++
@@ -36,15 +37,17 @@ HEADERS=$(PLINKDIR)/genome_c.h $(HMMDIR)/ls.h $(SRCDIR)/$(LSIMPUTE_CU).h $(IMPUT
 
 TEST_EX_NAME=tests
 TEST_EX=$(TESTDIR)/$(TEST_EX_NAME)
-TEST_SCRIPT=tester.py
+
+# Note to Dylan: Change this when we have actual benchmarking data.
+BENCHARGS=
 
 # For every distinct "module", there should be an entry here.
 OBJS=$(OBJDIR)/$(PLINK).o $(OBJDIR)/$(LS).o $(IMPUTER) $(OBJDIR)/$(LSIMPUTE_CU).o $(OBJDIR)/$(LSLIB).o
 
-.PHONY: dirs clean debug runtest
+.PHONY: dirs clean debug benchmark runtest
 
 $(EXECUTABLE): dirs $(OBJS) $(MAIN)
-	$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG=0 -o $@ $(OBJS) $(MAIN)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG=0 -DBENCH=$(BENCH) -o $@ $(OBJS) $(MAIN)
 
 dirs:
 	mkdir -p $(OBJDIR)
@@ -54,6 +57,11 @@ clean:
 
 debug: DEBUG=1
 debug: $(EXECUTABLE) $(TEST_EX)
+
+benchmark: BENCH=1
+benchmark: DEBUG=0
+benchmark: $(EXECUTABLE)
+	./$(EXECUTABLE) $(BENCHARGS)
 
 # For each distinct "module", there should be a rule here. For the most part,
 # the dependencies should be only the source and header files associated with

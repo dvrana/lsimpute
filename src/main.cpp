@@ -7,6 +7,10 @@
 #include "hmm/ls.h"
 #include "lsimpute.h"
 
+#if BENCH
+#include "cycleTimer.h"
+#endif
+
 // Look, geneticists make some long filenames, man
 #define FILENAMEMAX 1024
 
@@ -64,7 +68,11 @@ int main(int argc, char *argv[]) {
         }
         break;
       case 's':
+#if BENCH
+        fprintf(stderr, "-s not allowed in benchmarking mode!");
+#else
         sequential = true;
+#endif
         break;
       case '?':
         break;
@@ -103,6 +111,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+#if BENCH
+  double s1 = CycleTimer::currentSeconds();
+#endif
   strcpy(mapname, ref_files);
   strcpy(mapname + reflen, ".map");
   strcpy(pedname, ref_files);
@@ -116,19 +127,43 @@ int main(int argc, char *argv[]) {
   strcpy(pedname + samlen, ".ped");
 
   genome_t sam = g_fromfile(pedname, mapname);
+#if BENCH
+  double s2 = CycleTimer::currentSeconds();
+  double loadTime = s2-s1;
+  fprintf(stderr, "Loaded genomes from file(s) in %.4fs.\n");
+#endif
 
   // Run Li-Stephens
   float* P;
+#if BENCH
+  double gpuStart = CycleTimer::currentSeconds();
+#else
   if (!sequential) {
+#endif
     // XXX Note to Cam:
     // Replace the ID with the sample ID you want to LS
     // The number on the end is (at the moment) useless
-    P = runThing(ref, sam, std::string("03_03_1"), 0, g, theta);
+    P = ls_gpu(ref, sam, std::string("03_03_1"), 0, g, theta);
+#if BENCH
+    double gpuEnd = CycleTimer::currentSeconds();
+    double gpuTime = gpuEnd-gpuStart;
+    fprintf(stderr, "Completed GPU computation in %.4fs.\n", gpuTime);
+    double cpuStart = CycleTimer::currentSeconds();
+#else
   }
   else {
+#endif
     // XXX Note to Cam: same ID caveats as above
     P = ls(sam, std::string("03_03_1"), ref, g, theta);
+#if BENCH
+    double cpuEnd = CycleTimer::currentSeconds();
+    double cpuTime = cpuEnd-cpuStart;
+    fprintf(stderr, "Completed CPU computation in %.4fs.\n", cpuTime);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Total speedup from GPU: x%.4f\n", cpuTime / gpuTime);
+#else
   }
+#endif
 
   // TODO: impute here!
   free(P); // TODO: the imputer should free this
