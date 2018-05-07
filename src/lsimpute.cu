@@ -94,7 +94,8 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float g, float theta, int nsnp, int nsample, float* scratch) {
   // Initialize first row
   float c = logf(1.0f / ((float)nsample));
-  for (int i = threadIdx.x; i < nsample; i += blockDim.x) fw[i] = c;
+  for (int i = threadIdx.x; i < nsample; i += blockDim.x)
+    fw[i] = EMISS(sample[0], refs[i],g);
   __syncthreads();
 
   // For each SNP (going forward)
@@ -102,12 +103,12 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     int K = k * nsample;
     // Precompute jump probability
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
-    return;
-    float nJ = -1.0f * theta * dists[k];
+    float nJ = -1.0f * theta * dists[k-1];
     float J = d_logsub1(nJ);
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
+      printf("%d %d %d\n", k, i, refs[K+i]);
       fw[K - nsample + i] -= x;
       float alpha = d_logadd(fw[K - nsample + i] + nJ, J + c);
       fw[K + i] = alpha + EMISS(sample[k], refs[K+i],g);
@@ -168,14 +169,13 @@ __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
 
   // Forward step
   fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample, scratch);
-  return;
 
-  /*// Backward step
+  // Backward step
   bwKernel(refs, sample, dists, bw, g, theta, nsnp, nsample, scratch);
 
   // Smoothing step
   smoothKernel(fw, bw, nsnp, nsample, scratch);
-  return;*/
+  return;
 }
 
 float* lsimputer::compute(uint8_t* snps) {
@@ -210,7 +210,7 @@ float* lsimputer::compute(uint8_t* snps) {
 
   // Transfer data off the device
   float* res = (float*)malloc(sizeof(float) * nsnp * nsample);
-  cudaMemcpy(res, d_fw, sizeof(uint8_t) * nsnp * nsample,
+  cudaMemcpy(res, d_fw, sizeof(float) * nsnp * nsample,
       cudaMemcpyDeviceToHost);
 
   // Free device memory
