@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
   strcpy(pedname + reflen, ".ped");
 
   genome_t ref = g_fromfile(pedname, mapname);
+  printf("Reading reference panel from %s and %s...\n", mapname, pedname);
 
   strcpy(mapname, sam_files);
   strcpy(mapname + samlen, ".map");
@@ -116,6 +117,7 @@ int main(int argc, char *argv[]) {
   strcpy(pedname + samlen, ".ped");
 
   genome_t sam = g_fromfile(pedname, mapname);
+  printf("Reading imputed samples from %s and %s...\n", mapname, pedname);
 
   // Run Li-Stephens
   float* P;
