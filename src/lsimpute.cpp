@@ -22,9 +22,9 @@ lsimputer::lsimputer(genome_t G, float g_, float theta_) {
     for (auto entry : *G) {
         auto snpmap = entry.second;
         for (int i = 0 ; i < nsnp ; i += 1) {
-            ref[offs + i] = snpmap.get()[i];
+            ref[offs + (i * nsample)] = snpmap.get()[i];
         }
-        offs += nsnp;
+        offs += 1;
     }
 }
 
