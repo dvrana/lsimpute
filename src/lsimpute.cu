@@ -108,7 +108,6 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
-      printf("%d %d %d\n", k, i, refs[K+i]);
       fw[K - nsample + i] -= x;
       float alpha = d_logadd(fw[K - nsample + i] + nJ, J + c);
       fw[K + i] = alpha + EMISS(sample[k], refs[K+i],g);
@@ -124,7 +123,7 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   float c = logf(1.0f / ((float)nsample));
   for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
     bw[(nsample * (nsnp - 1)) + i] =
-      c + EMISS(refs[nsample * (nsnp - 1) + i], sample[nsnp - 1], g);
+      EMISS(refs[nsample * (nsnp - 1) + i], sample[nsnp - 1], g);
   }
 
   // For each SNP (going backward)
@@ -152,11 +151,13 @@ __device__ void smoothKernel(
     float* fw, float* bw, int nsnp, int nsample, float* scratch) {
   for (int i = 0; i < nsnp; i++) {
     int I = i * nsample;
-    for (int j = 0; j < nsample; j++) {
-      fw[I + j] = fw[I + j] + bw[I + j];
+    for (int j = threadIdx.x; j < nsample; j += blockDim.x) {
+      fw[I + j] = fw[I + j] + bw[I + nsample + j];
     }
-    d_logrownorm(&(fw[I]), nsample, scratch);
+    __syncthreads();
+    d_logrownorm(fw + I, nsample, scratch);
   }
+  d_logrownorm(fw + (nsample * (nsnp-1)), nsample, scratch);
   return;
 }
 
