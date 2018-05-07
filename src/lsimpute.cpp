@@ -1,8 +1,8 @@
 
-#include "lsimpute.h"
-#include "plinker/genome_c.h"
-
 #include <memory>
+#include "lsimpute.h"
+
+#include "plinker/genome_c.h"
 
 lsimputer::lsimputer(genome_t G, float g_, float theta_) {
     nsnp = g_nsnp(G);
@@ -11,7 +11,7 @@ lsimputer::lsimputer(genome_t G, float g_, float theta_) {
     g = g_;
     theta = theta_;
 
-    dists = new float[nsnp-1];
+    dists = new float[nsnp];
     ref = new uint8_t[nsnp * nsample];
 
     for (int i = 0 ; i < nsnp-1 ; i += 1) {
@@ -35,7 +35,7 @@ lsimputer::~lsimputer() {
 
 // TODO: clean this up
 // TODO: make this return multiple things or reuse data structures
-float* runThing(genome_t G, genome_t impute, std::string id, int chr,
+float* ls_gpu(genome_t G, genome_t impute, std::string id, int chr,
     float g, float theta) {
     auto thing = std::shared_ptr<lsimputer>(new lsimputer(G, g, theta));
 
