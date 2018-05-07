@@ -121,19 +121,19 @@ int main(int argc, char *argv[]) {
 
   // Run Li-Stephens
   float* P;
-  if (!sequential) {
-    // XXX Note to Cam:
-    // Replace the ID with the sample ID you want to LS
-    // The number on the end is (at the moment) useless
-    P = runThing(ref, sam, std::string("03_03_1"), 0, g, theta);
+  for (auto id : *ref) {
+    printf("Imputing sample %s\n",id.first.c_str());
+    if (!sequential) {
+      // XXX Note to Cam:
+      // The number after id.first (at the moment) useless
+      P = runThing(ref, sam, id.first, 0, g, theta);
+    }
+    else {
+      P = ls(sam, id.first, ref, g, theta);
+    }
+    // TODO: impute here
+    free(P);  // TODO: do something with this
   }
-  else {
-    // XXX Note to Cam: same ID caveats as above
-    P = ls(sam, std::string("03_03_1"), ref, g, theta);
-  }
-
-  // TODO: impute here!
-  free(P); // TODO: the imputer should free this
 
   return 0;
 }
