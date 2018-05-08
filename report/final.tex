@@ -30,6 +30,7 @@
 \usepackage{listings} % Pseudocode (examples in 15-451)
 
 \usepackage{cleveref} % Allows \cref for smart references
+\usepackage{graphicx}
 
 \newtheorem{theorem}{Theorem} % Makes theorems work
 
@@ -175,9 +176,79 @@ attempted to unroll the final warp as outlined (although we relied on compiler
 pragmas over hand-unrolling), but found it to not provide much noticeable
 speedup.
 
-\subsection{Future Improvements}
-
+\newpage
 \section{Results}
+
+{
+\begin{figure}[!hb]
+  \includegraphics[scale=0.2]{sample}
+\end{figure}
+\begin{figure}[!hb]
+  \includegraphics[scale=0.2]{snp}
+\end{figure}
+}
+
+Benchmarking was performed with $\theta = 1.0$ and $g = 0.1$ using generated
+test data, attempting to impute a single sample. Parallelizing over samples is
+trivial given multiple cores, as the samples are simply imputed in a for loop
+(with no shared state between runs).
+
+The two tables below are between two (sequential) trials, as imputing one
+person requires two runs.
+
+% TODO: Dylan, look at this
+
+% Also TODO: Cam, fix this formatting.
+
+\begin{table}[ht]
+  \caption{Data}
+\begin{tabular}{l|lll|l}
+Samples & SNPs  & GPU time (s) & CPU time (s) & Speedup       \\
+        \hline
+        & 600   & 0.19         & 0.01         & $\times 0.05$ \\
+25      & 6000  & 0.22         & 0.06         & $\times 0.30$ \\
+        & 60000 & 0.67         & 0.45         & $\times 0.67$ \\
+        \hline
+        & 600   & 0.22         & 0.10         & $\times 0.5$  \\
+250     & 6000  & 0.60         & 0.63         & $\times 1.1$  \\
+        & 60000 & 4.91         & 4.55         & $\times 0.92$ \\
+        \hline
+        & 600   & 0.51         & 1.02         & $\times 2$    \\
+2500    & 6000  & 3.35         & 6.92         & $\times 2$    \\
+        & 60000 & 32.2         & 57.2         & $\times 1.7$
+\end{tabular}
+
+\begin{tabular}{l|lll|l}
+  Samples & SNPs & GPU time (s) & CPU time (s) & Speedup       \\
+\hline
+  & 600&0.0067       & 0.01         & $\times 1.5$  \\
+  25 & 6000 &0.05         & 0.06         & $\times 1.13$ \\
+  & 60000&0.49         & 0.45         & $\times 0.91$ \\
+\hline
+  & 600&0.05         & 1.01         & $\times 1.7$  \\
+  250 & 6000&0.48         & 0.60         & $\times 1.2$  \\
+  & 60000 &4.80         & 4.54         & $\times 0.95$ \\
+\hline
+  & 600&0.38         & 1.01         & $\times 3$    \\
+  2500 &6000 &3.25         & 6.83         & $\times 2$    \\
+  & 60000&32.1         & 57.2         & $\times 1.7$
+\end{tabular}
+\end{table}
+
+We also recorded the following trials with 250000 samples
+(roughly the size of the UK Bio Bank, the largest current genetic sample)
+and 200 SNPs.
+
+\begin{table}[!ht]
+  \begin{tabular}{ll|l}
+    GPU time (s) & CPU time (s) & Speedup \\
+    \hline
+    0.42 & 38.3 & $\times 89$ \\
+    0.33 & 42.9 & $\times 130$ \\
+  \end{tabular}
+\end{table}
+
+\subsection{Discussion}
 
 \section{Division of Work}
 
