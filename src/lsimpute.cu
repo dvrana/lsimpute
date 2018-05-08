@@ -60,16 +60,15 @@ __device__ float row_logsum(float* A, int n, float* scratch) {
   }
   __syncthreads();
 
-  int big = n > WARP_SIZE;
-
-  for (int s = nthread/2 ; s > WARP_SIZE*big ; s >>= 1) {
+  #pragma unroll
+  for (int s = nthread/2 ; s > WARP_SIZE ; s >>= 1) {
     if (tid < s && tid+s < n) {
       scratch[tid] = d_logadd(scratch[tid], scratch[tid+s]);
     }
     __syncthreads();
   }
 
-  if (tid < WARP_SIZE && big) {
+  if (tid < WARP_SIZE) {
     #pragma unroll
     for (int j = WARP_SIZE ; j > 0 ; j >>= 1) {
       if (tid+j < n)
