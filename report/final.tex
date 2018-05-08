@@ -1,0 +1,187 @@
+\documentclass[12pt]{article}
+
+\newcommand{\eqspace}{\hspace{1.5cm}} % Spacing between equations on same line
+\def\Var{{\rm Var}\,} % Variance
+\def\E{{\rm E}\,} % Expectation
+\def\P{{\rm P}\,} % Probability
+
+\usepackage{textcomp}
+\usepackage{enumitem}
+\usepackage{framed}
+\usepackage{tablefootnote} % Allows command "\tablefootnote" for footnotes in tables
+\usepackage{lastpage} % \pageref{LastPage} for last page number
+\usepackage{wrapfig} % Allows "wrapfigure" environment
+
+% To double-space
+% \usepackage[doublespacing]{setspace}
+
+\usepackage{apacite}
+
+\usepackage{amsfonts}
+\usepackage{amsmath} % More math symbols
+\usepackage{amssymb} % More symbols
+\usepackage{gensymb} % More symbols
+%\usepackage{tipa} % IPA
+%\usepackage{qtree} % Simple trees
+\usepackage{amsthm} % Theorems
+\usepackage{chemfig} % Chemical figures
+\usepackage{chemmacros} % L and D chirality as \iupac{\L}
+\usepackage[version=3]{mhchem} % Chemical figures
+\usepackage{listings} % Pseudocode (examples in 15-451)
+
+\usepackage{cleveref} % Allows \cref for smart references
+
+\newtheorem{theorem}{Theorem} % Makes theorems work
+
+% For drawing graphs
+%\usepackage{tikz}
+%\usetikzlibrary{arrows}
+
+% For drawing Markov chains as per http://steventhornton.ca/markov-chains-in-latex/
+%\usepackage{tikz}
+%\usetikzlibrary{automata, positioning}
+
+\usepackage{fancyhdr}
+
+% header
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{ Cameron Wong (cjwong) \& Dylan Vrana (dtv) }
+\chead{   }
+\rhead{Page \thepage{} of \pageref{LastPage}}
+
+\title{GPU Parallelization of the Li-Stephens Method for Genetic Imputation}
+\author{Cameron Wong \& Dylan Vrana}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+lol no generics
+
+\end{abstract}
+
+\section{Background}
+
+Modern human genetics relies on two technologies for determining a person's genetic state.  The first is \textit{sequencing}, which measures a person's whole genome, totaling about 6 billion base pairs.  While complete, sequencing is expensive; even at scale, genome sequencing costs on the order of \$1000 per genome, though this is decreasing rapidly.  The other option is microarray genotyping in which, rather than measuring all base pairs in the human genome, a small subset of base pairs are selected for measurement.\footnote{Depending on application, this may be anything from 100 to 100,000.}  Most base pairs in the human genome are shared by all humans (and in fact shared with other species), making their measurement of little value.\footnote{There is still some value in measuring usually-constant base pairs- they can be modified by random (\textit{de novo}) mutations or by chromosomal abnormalities and deletions.}  Because genotyping is significantly less expensive than sequencing (about \$25 at scale) and can target only the subset of base pairs which vary within humans (referred to as \textit{Single Nucleotide Polymorphisms}, or \textit{SNPs}), it offers a low-cost alternative to sequencing which is, in most cases, sufficient for research and medical purposes.
+
+However, a microarray cannot easily measure all SNPs.  A typical micrarray will measure 50k - 1M SNPs, while there are somewhere between 10M and 100M human SNPs, depending on what definitions are used.  Because measuring every SNP would become expensive (the very problem microarrays were designed to avoid), modern microarrays measure a subset of all SNPs and the remainder are \textit{imputed} (interred from existing data).  This is possible because of \textit{linkage disequilibrium}, the spatial intercorrelation of SNPs, which arises from biological properties of genetic recombination.
+
+Most modern imputation algorithms are based on the Li-Stephens model, a first-order hidden Markov model that represents a genome as a series SNPs taken from reference \textit{haplotypes} (blocks of SNPs in close linkage disequilibrium) with a given \textit{jump probability} (probability of moving between haplotypes) \cite{listephens}. The majority of computation in Li-Stephens is involved in the \textit{forward-backward algorithm}, which calculates the posterior marginal probabilities of all possible hidden states given a sequence of observed emissions- here, the hidden states are ancestral genomes (represented by a reference panel) and the emissions are the known SNPs from which we are imputing.
+
+\subsection{The Li-Stephens Model}
+
+The model we present here (and implement) is a simplification of the full Li-Stephens model \cite{listephens}.  Our simplifications are purely to simplify some mathematics relevant to Li and Stephens' original goal of describing variation in recombination rate, but less relevant to our goal of imputation.  These changes do not alter the characteristics of the algorithmic problem.
+
+We have $n$ sampled genomes $x_1 \ldots x_n$, each $T$ characters long.  These characters are taken from the alphabet $\Sigma = \{\text{A}, \text{T}, \text{C}, \text{G}\}$.  We also have a genome $y$ to be imputed, also $T$ characters long, where $O_t$ is the $t$th character emitted by $y$.  
+
+Let $g$ be our garble rate (the probability that an observed SNP is mis-measured), $0 < g < 1$.  Let $\theta$ be a jump constant.  Let $d_t$ be the distance in map units\footnote{We use morgans, where one morgan is defined to be the distance along a chromosome over which one recombination event is expected.} between SNPs $t$ and $t+1$.
+
+Then construct a hidden markov model of $n$ states, each one corresponding to a sampled genome.  Define a jump probability $J_t = 1 - e^{-d_t\theta}$.\footnote{Note that this means our transition probabilities depend on time step- technically not allowable in a Markov chain, but perfectly tractable for the algorithms we will use.}  The transition probability from state $i$ to state $j$ $\alpha_{ij}$ is
+
+\[ a_{ij} = \begin{cases} 
+      (1 - J_t) + \frac{J_t}{n} & i = j \\
+      \frac{J_t}{n} & i \neq j \\
+   \end{cases}
+\]
+
+The emission probability $e_t(z)$ is
+
+\[ e_t(z) = \begin{cases} 
+      1-g & z = O_t \\
+      g & z \neq O_t \\
+   \end{cases}
+\]
+
+\subsection{The Forward-Backward algorithm}
+
+We are trying to discover $y_t$, the probability that the hidden state (here corresponding to the ``ancestral'' genome among our reference panel) at any given time $t$.  The Forward-Backward algorithm is a means of calculating the probability $P(y_t = x_t | O_{1:T})$ that a Markov process is in a given state at any time given an observed output sequence.  We do this via Bayes' rule
+
+$$ P(x_t | O_{1:T}) = P(x_t | O_{1:O_t}, O{t+1:T}) \propto P(O{t+1:T} | x_t) P(x_t | O_{1:t}) $$
+
+If we assume that the hidden state must be one of the $n$ hidden states we have (a necessary assumption for imputation), we can easily calculate the normalization factor by summing across all possible hidden states at time $t$.  We calculate $P(O{t+1:T} | x_t)$ via the backward algorithm and $P(x_t | O_{1:t})$ via the forward algorithm.  This means that the $P(O{t+1:T} | x_t)$ and $P(x_t | O_{1:t})$ we calculate must only be proportional to their real values across rows.  This will allow us to optimize our algorithm later.
+
+\subsubsection{The Forward Algorithm}
+
+The Forward algorithm is a dynamic algorithm for calculating $P(x_i | O_{1:t})$ given $n$ hidden states $x_1 \ldots x_n$ with transition probabilities $\alpha_{ij}$, emission probabilities $e_i(O_t)$, an observed sequence $O$, and an initial state $\pi$.  Take a matrix $A$ with $n$ columns and $T$ rows.  After running the algorithm, the $(t,i)$th element will be (proportional to) $P(x_i | O_{1:t})$.  
+
+Initialize the first row to the initial state $\pi$.  Then, define every other cell by the recursive form
+
+$$ A(t, i) = \sum_j \alpha_{ji} e_i(O_t) A(t-1, j) $$
+
+This algorithm runs in $O(TN^2)$ work and $O(TN)$ span.  Its parallelism is limited by data dependencies- every cell in the $i+1$th row depends on every cell in the $i$th row.
+
+\subsubsection{The Backward Algorithm}
+
+The Backward algorithm is much like the Forward algorithm in structure.  It is a dynamic programming algorithm to calculate $P(O{t+1:T} | x_t)$.  While the Forward algorithm starts in the first row of the matrix and works forward in time, the Backward algorithm starts at the last row and works backwards in time.  Given the same inputs as the Forward algorithm, it initializes the last row to $e_i(O_T)$, then, defines every other cell by the recursive formula 
+
+$$ B(t, i) = \sum_j \alpha_{ij} e_i(O_t) B(t+1, j) $$
+
+This algorithm has the same runtime and general features as Forward.
+
+\subsubsection{Smoothing}
+
+Smoothing is a element-wise multiplication of the arrays $A$ and $B$.  We multiply such that 
+
+$$ P(x_{it} | O_{1:T}) \propto A(t, i)B(t+1,i) $$
+
+Then we normalize rows so all values sum to 1.  
+
+This algorithm runs in $O(NT)$ work and $O(\log N)$ span.  
+
+\section{Approach}
+
+\subsection{Technologies Used}
+
+We targeted NVIDIA GPU via CUDA.  We chose to target the GPU because running the Forward-Backward algorithm required a great deal of parallel floating point computation, well-suited for %TODO: this for Dylan
+
+\subsection{Parallelizing Forward (and Backward)}
+
+By taking advantage of natural characteristics of the Li-Stephens model, we are able to reduce the algorithm to $O(TN)$ work and $O(T\log N)$ span.
+
+In the standard forward-backward algorithm, the forward and backward steps take the majority of the time; therefore, we will focus on them and disregard smoothing.  In addition, because the forward and backward algorithms have the same structure, I will describe a simplification of the forward algorithm that extends to the backward algorithm.
+
+We perform the following reduction of the forward algorithm recurrence.
+
+$$ A(t, i) = \sum_j \alpha_{ji} e_i(O_t) A(t-1, j) $$
+$$ A(t, i) = e_i(O_t) (\sum_j \alpha_{ji}  A(t-1, j)) $$
+$$ A(t, i) = e_i(O_t) ((1-J_t)A(t-1, j) + \sum_j \frac{J_t}{n} A(t-1, j)) $$
+$$ A(t, i) = e_i(O_t) ((1-J_t)A(t-1, j) + \frac{J_t}{n}\sum_j A(t-1, j)) $$
+
+Thus, for the Li-Stephens model, we can calculate the $i$th element relying on only the element immediately above it and the sum of the above row.  Summing a row takes $O(\log N)$ span, and computing the recursion can be parallelized, so computing the $i+1$th row from the $i$th row takes $O(\log N)$, and repeating this for the entire matrix takes $O(T\log N)$.\footnote{In practice, we normalize the above row (still takes $O(\log N)$) so that probabilities never get too small and we can avoid numerical issues.}
+
+\subsection{Parallel Reduce}
+
+In practice, however, a naive reduce is infeasible due to the width of the rows
+being significantly larger than the maximum number of threads modern GPUs can
+support (the Thousand Genomes Project, for example, contains around $N = 2500$
+samples, over twice as many elements as the 1024 threads currently offered).
+With a sufficiently large number of samples, we would break the reduce into
+multiple recursive kernel invocations, and then reduce the chunked results.
+We found this approach to be impractical. Instead, we found having each thread
+compute the logarithmic sum of $\lceil\frac{N}{h}\rceil$ (where $h$ is the
+maximum number of allowed threads) before doing a single-layered reduce on the
+results to be sufficient. Modern genome sampling efforts only contain a low
+multiple of $h = 1024$ samples, and so the recursive kernel was completely
+dominated by kernel spawn overhead.
+
+Of the micro-optimizations outlined in the NVIDIA developer
+documentation\cite{reduceopt}, we were able to achieve speedup via address
+interleaving (reducing divergent branching) and sequential addressing to reduce
+shared bank conflicts, both of which gave significant speedup. We also
+attempted to unroll the final warp as outlined (although we relied on compiler
+pragmas over hand-unrolling), but found it to not provide much noticeable
+speedup.
+
+\subsection{Future Improvements}
+
+\section{Results}
+
+\section{Division of Work}
+
+\bibliographystyle{apacite}
+\bibliography{report}
+
+\end{document}
