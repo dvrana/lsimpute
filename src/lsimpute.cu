@@ -3,10 +3,24 @@
 #include <math_constants.h>
 #include "lsimpute.h"
 
-#define EMISS(o1, o2, g) (o1 == o2 ? (1 - g) : g)
+#define EMISS(o1, o2, g) log(o1 == o2 ? (1 - g) : g)
 
 #define BLOCKMAX 512 // TODO: set to 1024 if compute capability >= 2.0
 #define WARP_SIZE 32
+
+/* Calculates log(exp(x) + exp(y))
+ */
+__device__ float d_logadd(float x, float y) {
+  //return x+y;
+  if (y > x) { return d_logadd(y,x); }
+  return x + logf(1.0f+expf(y-x));
+}
+
+/* Calculates log(1.0f - exp(x))
+ */
+__device__ float d_logsub1(float x) {
+  return logf(1.0f - expf(x));
+}
 
 __device__ bool isPow2(int n) {
   return (n != 0) && (n & (n-1)) == 0;
@@ -27,7 +41,7 @@ int npow2(int n) {
  * that are in natural log space
  * Basically, find log(sum(p1 ... pn)) given log(p1) .. log(pn)
  */
-__device__ float row_sum(float* A, int n, float* scratch) {
+__device__ float row_logsum(float* A, int n, float* scratch) {
   n = npow2(n);
   // Possible performance speedup: half our threads are idle on the first loop!
   int tid = threadIdx.x;
@@ -42,7 +56,7 @@ __device__ float row_sum(float* A, int n, float* scratch) {
   // get larger, we'll need to start looking into recursive kernel invocation.
   scratch[tid] = A[i];
   for (int j = 1 ; j < elts && i+j < n ; j += 1) {
-    scratch[tid] = scratch[tid] + A[i+j];
+    scratch[tid] = d_logadd(scratch[tid], A[i+j]);
   }
   __syncthreads();
 
@@ -50,7 +64,7 @@ __device__ float row_sum(float* A, int n, float* scratch) {
 
   for (int s = nthread/2 ; s > WARP_SIZE*big ; s >>= 1) {
     if (tid < s && tid+s < n) {
-      scratch[tid] = scratch[tid] + scratch[tid+s];
+      scratch[tid] = d_logadd(scratch[tid], scratch[tid+s]);
     }
     __syncthreads();
   }
@@ -59,7 +73,7 @@ __device__ float row_sum(float* A, int n, float* scratch) {
     #pragma unroll
     for (int j = WARP_SIZE ; j > 0 ; j >>= 1) {
       if (tid+j < n)
-        scratch[tid] = scratch[tid] + scratch[tid+j];
+        scratch[tid] = d_logadd(scratch[tid], scratch[tid+j]);
     }
   }
 
@@ -70,16 +84,16 @@ __device__ float row_sum(float* A, int n, float* scratch) {
 /* Normalizes the n floating point values in the array starting at A
  * (sets A[i] = log(exp(A[i]) / exp(reduce_logsum(A,n))))
  */
-__device__ void d_rownorm(float* A, int n, float* scratch) {
-  float x = row_sum(A, n, scratch);
-  for (int i = 0; i < n; i++) A[i] /= x;
+__device__ void d_logrownorm(float* A, int n, float* scratch) {
+  float x = row_logsum(A, n, scratch);
+  for (int i = 0; i < n; i++) A[i] -= x;
   return;
 }
 
 __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float g, float theta, int nsnp, int nsample, float* scratch) {
   // Initialize first row
-  float c = 1.0f / ((float)nsample);
+  float c = logf(1.0f / ((float)nsample));
   for (int i = threadIdx.x; i < nsample; i += blockDim.x)
     fw[i] = EMISS(sample[0], refs[i],g);
   __syncthreads();
@@ -88,15 +102,15 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = 1; k < nsnp; k++) {
     int K = k * nsample;
     // Precompute jump probability
-    float x = row_sum(&(fw[K-nsample]), nsample, scratch);
-    float nJ = expf(-1.0f * theta * dists[k-1]);
-    float J = 1.0 - nJ;
+    float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
+    float nJ = -1.0f * theta * dists[k-1];
+    float J = d_logsub1(nJ);
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
-      fw[K - nsample + i] /= x;
-      float alpha = fw[K - nsample + i] * nJ + J * c;
-      fw[K + i] = alpha * EMISS(sample[k], refs[K+i],g);
+      fw[K - nsample + i] -= x;
+      float alpha = d_logadd(fw[K - nsample + i] + nJ, J + c);
+      fw[K + i] = alpha + EMISS(sample[k], refs[K+i],g);
     }
     __syncthreads();
   }
@@ -106,7 +120,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
 __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* bw, float g, float theta, int nsnp, int nsample, float* scratch) {
   // Initialize last row
-  float c = 1.0f / ((float)nsample);
+  float c = logf(1.0f / ((float)nsample));
   for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
     bw[(nsample * (nsnp - 1)) + i] =
       EMISS(refs[nsample * (nsnp - 1) + i], sample[nsnp - 1], g);
@@ -116,15 +130,15 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
   for (int k = nsnp - 2; k >= 0; k--) {
     int K = k * nsample;
     // Precompute jump probability
-    float x = row_sum(&(bw[K+nsample]), nsample, scratch);
-    float nJ = expf(-1.0f * theta * dists[k]);
-    float J = 1.0f - nJ;
+    float x = row_logsum(&(bw[K+nsample]), nsample, scratch);
+    float nJ = -1.0f * theta * dists[k];
+    float J = d_logsub1(nJ);
 
     // Calculate values
     for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
-      bw[K + nsample + i] /= x;
-      float alpha = (J * c) + (nJ * bw[K + i + nsample]);
-      bw[K + i] = alpha * EMISS(sample[k], refs[K+i], g);
+      bw[K + nsample + i] -= x;
+      float alpha = d_logadd(J + c, nJ + bw[K + i + nsample]);
+      bw[K + i] = alpha + EMISS(sample[k], refs[K+i], g);
     }
     __syncthreads();
   }
@@ -135,15 +149,15 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
  */
 __device__ void smoothKernel(
     float* fw, float* bw, int nsnp, int nsample, float* scratch) {
-  for (int i = 0; i < nsnp-1; i++) {
+  for (int i = 0; i < nsnp; i++) {
     int I = i * nsample;
     for (int j = threadIdx.x; j < nsample; j += blockDim.x) {
-      fw[I + j] = fw[I + j] * bw[I + nsample + j];
+      fw[I + j] = fw[I + j] + bw[I + nsample + j];
     }
     __syncthreads();
-    d_rownorm(fw + I, nsample, scratch);
+    d_logrownorm(fw + I, nsample, scratch);
   }
-  d_rownorm(fw + (nsample * (nsnp-1)), nsample, scratch);
+  d_logrownorm(fw + (nsample * (nsnp-1)), nsample, scratch);
   return;
 }
 
