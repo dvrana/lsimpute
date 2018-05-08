@@ -17,17 +17,24 @@ const char* MAP_TEST_02 = "data/02.map";
 const char* PED_TEST_03 = "data/03.ped";
 const char* MAP_TEST_03 = "data/03.map";
 
-// Takes a log-scaled float array n and returns its non-log sum
+// Sums a row
 float rowSum(float* A, int n) {
+  float x = 0.0f;
+  for (int i = 0; i < n; i++) x += A[i];
+  return x;
+}
+
+// Takes a log-scaled float array n and returns its non-log sum
+float rowLogSum(float* A, int n) {
   float x = 0.0f;
   for (int i = 0; i < n; i++) x += exp(A[i]);
   return x;
 }
 
-void printLogMat(float* A, int nrow, int ncol) {
+void printMat(float* A, int nrow, int ncol) {
   for (int i = 0; i < nrow; i++) {
     for (int j = 0; j < ncol; j++) {
-      fprintf(stderr,"%f\t",exp(A[i * ncol + j]));
+      fprintf(stderr,"%f\t",A[i * ncol + j]);
     }
     fprintf(stderr,"\n");
   }
@@ -64,7 +71,7 @@ void runSeqHMMBasicTest() {
 
     // Test row sums
     for (int i = 0; i < nsnp; i++) {
-      float x = rowSum(&(P[i * nref]),nref);
+      float x = rowLogSum(&(P[i * nref]),nref);
       if (!FEQ(x,1.0f)) {
         fprintf(stderr, "Row %d of results sums to %f\n",i, x);
         ASSERT(false, "Row does not sum to 1!");
@@ -118,6 +125,8 @@ void runGPUHMMBasicTest() {
 
   float* P = runThing(ref, sam, std::string("03_03_1"), 12, 0.1, 1.0);
 
+  printMat(P, nsnp, nsample);
+
   // Test row sums
   for (int i = 0; i < nsnp; i++) {
     float x = rowSum(&(P[i * nsample]),nsample);
@@ -128,40 +137,40 @@ void runGPUHMMBasicTest() {
   }
 
   // Test smoothed values
-  ASSERT(FEQ(exp(P[0]),0.007682004169127661),
+  ASSERT(FEQ(P[0],0.007682004169127661),
       "GPU HMM result at (0,0) incorrect!");
-  ASSERT(FEQ(exp(P[1]),0.8308619624778509),
+  ASSERT(FEQ(P[1],0.8308619624778509),
       "GPU HMM result at (1,1) incorrect!");
-  ASSERT(FEQ(exp(P[2]),0.14150498107198667),
+  ASSERT(FEQ(P[2],0.14150498107198667),
       "GPU HMM result at (1,2) incorrect!");
-  ASSERT(FEQ(exp(P[3]),0.019951052281034633),
+  ASSERT(FEQ(P[3],0.019951052281034633),
       "GPU HMM result at (1,3) incorrect!");
 
-  ASSERT(FEQ(exp(P[4]),0.001732168759242964),
+  ASSERT(FEQ(P[4],0.001732168759242964),
       "GPU HMM result at (2,0) incorrect!");
-  ASSERT(FEQ(exp(P[5]),0.8759231805429016),
+  ASSERT(FEQ(P[5],0.8759231805429016),
       "GPU HMM result at (2,1) incorrect!");
-  ASSERT(FEQ(exp(P[6]),0.0973247978381002),
+  ASSERT(FEQ(P[6],0.0973247978381002),
       "GPU HMM result at (2,2) incorrect!");
-  ASSERT(FEQ(exp(P[7]),0.025019852859755082),
+  ASSERT(FEQ(P[7],0.025019852859755082),
       "GPU HMM result at (2,3) incorrect!");
 
-  ASSERT(FEQ(exp(P[8]),0.0022783504437034583),
+  ASSERT(FEQ(P[8],0.0022783504437034583),
       "GPU HMM result at (3,0) incorrect!");
-  ASSERT(FEQ(exp(P[9]),0.874279472249249),
+  ASSERT(FEQ(P[9],0.874279472249249),
       "GPU HMM result at (3,1) incorrect!");
-  ASSERT(FEQ(exp(P[10]),0.09714216358324991),
+  ASSERT(FEQ(P[10],0.09714216358324991),
       "GPU HMM result at (3,2) incorrect!");
-  ASSERT(FEQ(exp(P[11]),0.026300013723797623),
+  ASSERT(FEQ(P[11],0.026300013723797623),
       "GPU HMM result at (3,3) incorrect!");
 
-  ASSERT(FEQ(exp(P[12]),0.005474670956529986),
+  ASSERT(FEQ(P[12],0.005474670956529986),
       "GPU HMM result at (3,0) incorrect!");
-  ASSERT(FEQ(exp(P[13]),0.8458619051087488),
+  ASSERT(FEQ(P[13],0.8458619051087488),
       "GPU HMM result at (3,1) incorrect!");
-  ASSERT(FEQ(exp(P[14]),0.12077602266265874),
+  ASSERT(FEQ(P[14],0.12077602266265874),
       "GPU HMM result at (3,2) incorrect!");
-  ASSERT(FEQ(exp(P[15]),0.027887401272062663),
+  ASSERT(FEQ(P[15],0.027887401272062663),
       "GPU HMM result at (3,3) incorrect!");
 }
 
