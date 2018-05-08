@@ -37,7 +37,7 @@ public:
     float* compute(uint8_t* snps);
 };
 
-float* runThing(genome_t G, genome_t impute, std::string id, int chr,
+float* ls_gpu(genome_t G, genome_t impute, std::string id, int chr,
     float g, float theta);
 
 #endif

@@ -7,6 +7,10 @@
 #include "hmm/ls.h"
 #include "lsimpute.h"
 
+#if BENCH
+#include "cycleTimer.h"
+#endif
+
 // Look, geneticists make some long filenames, man
 #define FILENAMEMAX 1024
 
@@ -64,7 +68,11 @@ int main(int argc, char *argv[]) {
         }
         break;
       case 's':
+#if BENCH
+        fprintf(stderr, "-s not allowed in benchmarking mode!");
+#else
         sequential = true;
+#endif
         break;
       case '?':
         break;
@@ -103,36 +111,73 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+#if BENCH
+  double s1 = CycleTimer::currentSeconds();
+#endif
   strcpy(mapname, ref_files);
   strcpy(mapname + reflen, ".map");
   strcpy(pedname, ref_files);
   strcpy(pedname + reflen, ".ped");
 
   genome_t ref = g_fromfile(pedname, mapname);
-  printf("Reading reference panel from %s and %s...\n", mapname, pedname);
 
+#if BENCH
+  double s2 = CycleTimer::currentSeconds();
+  printf("Read reference panel in %.4fs\n", s2-s1);
+#else
+  printf("Read reference panel from %s and %s...\n", mapname, pedname);
+#endif
+
+#if BENCH
+  s1 = CycleTimer::currentSeconds();
+#endif
   strcpy(mapname, sam_files);
   strcpy(mapname + samlen, ".map");
   strcpy(pedname, sam_files);
   strcpy(pedname + samlen, ".ped");
 
   genome_t sam = g_fromfile(pedname, mapname);
-  printf("Reading imputed samples from %s and %s...\n", mapname, pedname);
+#if BENCH
+  s2 = CycleTimer::currentSeconds();
+  printf("Read imputed samples in %.4fs\n", s2-s1);
+#else
+  printf("Read imputed samples from %s and %s...\n", mapname, pedname);
+#endif
+
 
   // Run Li-Stephens
   float* P;
-  for (auto id : *ref) {
+  for (auto id : *sam) {
     printf("Imputing sample %s\n",id.first.c_str());
+#if BENCH
+    double gpuStart = CycleTimer::currentSeconds();
+#else
     if (!sequential) {
+#endif
       // XXX Note to Cam:
       // The number after id.first (at the moment) useless
-      P = runThing(ref, sam, id.first, 0, g, theta);
+      P = ls_gpu(ref, sam, id.first, 0, g, theta);
+#if BENCH
+      double gpuEnd = CycleTimer::currentSeconds();
+      double gpuTime = gpuEnd-gpuStart;
+      fprintf(stderr, "Completed GPU computation in %.4fs.\n", gpuTime);
+      double cpuStart = CycleTimer::currentSeconds();
+#else
     }
     else {
+#endif
       P = ls(sam, id.first, ref, g, theta);
+#if BENCH
+      double cpuEnd = CycleTimer::currentSeconds();
+      double cpuTime = cpuEnd-cpuStart;
+      fprintf(stderr, "Completed CPU computation in %.4fs.\n", cpuTime);
+      fprintf(stderr, "\n");
+      fprintf(stderr, "Speedup from GPU: x%.4f\n", cpuTime / gpuTime);
+#else
     }
+#endif
     // TODO: impute here
-    free(P);  // TODO: do something with this
+    free(P);
   }
 
   return 0;
