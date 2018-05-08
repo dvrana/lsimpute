@@ -90,7 +90,7 @@ __device__ void d_logrownorm(float* A, int n, float* scratch) {
 }
 
 __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
-    float* fw, float g, float theta, int nsnp, int nsample, float* scratch) {
+    float* fw, float g, int nsnp, int nsample, float* scratch) {
   // Initialize first row
   float c = logf(1.0f / ((float)nsample));
   for (int i = threadIdx.x; i < nsample; i += blockDim.x)
@@ -102,7 +102,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     int K = k * nsample;
     // Precompute jump probability
     float x = row_logsum(&(fw[K-nsample]), nsample, scratch);
-    float nJ = -1.0f * theta * dists[k-1];
+    float nJ = dists[k-1];
     float J = d_logsub1(nJ);
 
     // Calculate values
@@ -117,7 +117,7 @@ __device__ void fwKernel(uint8_t* refs, uint8_t* sample, float* dists,
 }
 
 __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
-    float* bw, float g, float theta, int nsnp, int nsample, float* scratch) {
+    float* bw, float g, int nsnp, int nsample, float* scratch) {
   // Initialize last row
   float c = logf(1.0f / ((float)nsample));
   for (int i = threadIdx.x; i < nsample; i += blockDim.x) {
@@ -130,7 +130,7 @@ __device__ void bwKernel(uint8_t* refs, uint8_t* sample, float* dists,
     int K = k * nsample;
     // Precompute jump probability
     float x = row_logsum(&(bw[K+nsample]), nsample, scratch);
-    float nJ = -1.0f * theta * dists[k];
+    float nJ = dists[k];
     float J = d_logsub1(nJ);
 
     // Calculate values
@@ -160,6 +160,12 @@ __device__ void smoothKernel(
   return;
 }
 
+__device__ void precomputeKernel(float* dists, int nsnp, float theta) {
+  theta = -1.0 * theta;
+  for (int i = threadIdx.x; i < (nsnp - 1); i += blockDim.x)
+    dists[i] = theta * dists[i];
+}
+
 __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
     float* fw, float* bw, float g, float theta, int nsnp, int nsample,
     int nscratch) {
@@ -167,11 +173,14 @@ __global__ void computeKernel(uint8_t* refs, uint8_t* sample, float* dists,
 
   __syncthreads();
 
+  // Precompute jump constants
+  precomputeKernel(dists, nsnp, theta);
+
   // Forward step
-  fwKernel(refs, sample, dists, fw, g, theta, nsnp, nsample, scratch);
+  fwKernel(refs, sample, dists, fw, g, nsnp, nsample, scratch);
 
   // Backward step
-  bwKernel(refs, sample, dists, bw, g, theta, nsnp, nsample, scratch);
+  bwKernel(refs, sample, dists, bw, g, nsnp, nsample, scratch);
 
   // Smoothing step
   smoothKernel(fw, bw, nsnp, nsample, scratch);
