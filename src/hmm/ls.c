@@ -69,7 +69,7 @@ float* forward(genome_t sample, std::string id, genome_t ref, float g, float the
     // Calculate values
     for (int j = 0; j < n_ref; j++) {
       float alpha = logadd((fw[((i-1)*n_snp)+j] + nJ),(J + c));
-      fw[i * n_snp + j] = alpha + EMISS(s[i],S[j][i],g);
+      fw[i * n_ref + j] = alpha + EMISS(s[i],S[j][i],g);
     }
   }
   return fw;
