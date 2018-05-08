@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   // Run Li-Stephens
   float* P;
-  for (auto id : *ref) {
+  for (auto id : *sam) {
     printf("Imputing sample %s\n",id.first.c_str());
 #if BENCH
     double gpuStart = CycleTimer::currentSeconds();
