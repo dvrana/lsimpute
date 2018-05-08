@@ -118,8 +118,6 @@ void runGPUHMMBasicTest() {
 
   float* P = ls_gpu(ref, sam, std::string("03_03_1"), 12, 0.1, 1.0);
 
-  printLogMat(P, nsnp, nsample);
-
   // Test row sums
   for (int i = 0; i < nsnp; i++) {
     float x = rowSum(&(P[i * nsample]),nsample);

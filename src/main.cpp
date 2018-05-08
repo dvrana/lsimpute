@@ -121,6 +121,16 @@ int main(int argc, char *argv[]) {
 
   genome_t ref = g_fromfile(pedname, mapname);
 
+#if BENCH
+  double s2 = CycleTimer::currentSeconds();
+  printf("Read reference panel in %.4fs\n", s2-s1);
+#else
+  printf("Read reference panel from %s and %s...\n", mapname, pedname);
+#endif
+
+#if BENCH
+  s1 = CycleTimer::currentSeconds();
+#endif
   strcpy(mapname, sam_files);
   strcpy(mapname + samlen, ".map");
   strcpy(pedname, sam_files);
@@ -128,45 +138,47 @@ int main(int argc, char *argv[]) {
 
   genome_t sam = g_fromfile(pedname, mapname);
 #if BENCH
-  double s2 = CycleTimer::currentSeconds();
-  double loadTime = s2-s1;
-  fprintf(stderr, "Loaded genomes from file(s) in %.4fs.\n");
+  s2 = CycleTimer::currentSeconds();
+  printf("Read imputed samples in %.4fs\n", s2-s1);
+#else
+  printf("Read imputed samples from %s and %s...\n", mapname, pedname);
 #endif
+
 
   // Run Li-Stephens
   float* P;
+  for (auto id : *ref) {
+    printf("Imputing sample %s\n",id.first.c_str());
 #if BENCH
-  double gpuStart = CycleTimer::currentSeconds();
+    double gpuStart = CycleTimer::currentSeconds();
 #else
-  if (!sequential) {
+    if (!sequential) {
 #endif
-    // XXX Note to Cam:
-    // Replace the ID with the sample ID you want to LS
-    // The number on the end is (at the moment) useless
-    P = ls_gpu(ref, sam, std::string("03_03_1"), 0, g, theta);
+      // XXX Note to Cam:
+      // The number after id.first (at the moment) useless
+      P = ls_gpu(ref, sam, id.first, 0, g, theta);
 #if BENCH
-    double gpuEnd = CycleTimer::currentSeconds();
-    double gpuTime = gpuEnd-gpuStart;
-    fprintf(stderr, "Completed GPU computation in %.4fs.\n", gpuTime);
-    double cpuStart = CycleTimer::currentSeconds();
+      double gpuEnd = CycleTimer::currentSeconds();
+      double gpuTime = gpuEnd-gpuStart;
+      fprintf(stderr, "Completed GPU computation in %.4fs.\n", gpuTime);
+      double cpuStart = CycleTimer::currentSeconds();
 #else
+    }
+    else {
+#endif
+      P = ls(sam, id.first, ref, g, theta);
+#if BENCH
+      double cpuEnd = CycleTimer::currentSeconds();
+      double cpuTime = cpuEnd-cpuStart;
+      fprintf(stderr, "Completed CPU computation in %.4fs.\n", cpuTime);
+      fprintf(stderr, "\n");
+      fprintf(stderr, "Speedup from GPU: x%.4f\n", cpuTime / gpuTime);
+#else
+    }
+#endif
+    // TODO: impute here
+    free(P);
   }
-  else {
-#endif
-    // XXX Note to Cam: same ID caveats as above
-    P = ls(sam, std::string("03_03_1"), ref, g, theta);
-#if BENCH
-    double cpuEnd = CycleTimer::currentSeconds();
-    double cpuTime = cpuEnd-cpuStart;
-    fprintf(stderr, "Completed CPU computation in %.4fs.\n", cpuTime);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Total speedup from GPU: x%.4f\n", cpuTime / gpuTime);
-#else
-  }
-#endif
-
-  // TODO: impute here!
-  free(P); // TODO: the imputer should free this
 
   return 0;
 }
