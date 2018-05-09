@@ -72,6 +72,10 @@ However, a microarray cannot easily measure all SNPs.  A typical micrarray will 
 
 Most modern imputation algorithms are based on the Li-Stephens model, a first-order hidden Markov model that represents a genome as a series SNPs taken from reference \textit{haplotypes} (blocks of SNPs in close linkage disequilibrium) with a given \textit{jump probability} (probability of moving between haplotypes) \cite{listephens}. The majority of computation in Li-Stephens is involved in the \textit{forward-backward algorithm}, which calculates the posterior marginal probabilities of all possible hidden states given a sequence of observed emissions- here, the hidden states are ancestral genomes (represented by a reference panel) and the emissions are the known SNPs from which we are imputing.
 
+\subsection{Imputation}
+
+An imputation system takes three inputs: a reference panel, samples to be imputed, and parameters.  The reference panel is a file of $n$ samples, taken to be representative of the underlying population.  They should have a fairly complete sample of all genetic variants, as they will be used to infer genetic state.  The samples to be imputed do not need such a density of SNPs.  Both of these are (in our algorithm) passed in as text PLINK files, a convention for genetic data \cite{plinkpaper}.  They must also be phased, matching up variants on strands 1 and 2.  Finally, Li-Stephens takes two numerical parameters:\footnote{The full Li-Stephens model takes more, but we simplified out some parameters because they're irrelevant to our goals and optimization.} a garble rate $g$ and a recombination constant $\theta$.
+
 \subsection{The Li-Stephens Model}
 
 The model we present here (and implement) is a simplification of the full Li-Stephens model \cite{listephens}.  Our simplifications are purely to simplify some mathematics relevant to Li and Stephens' original goal of describing variation in recombination rate, but less relevant to our goal of imputation.  These changes do not alter the characteristics of the algorithmic problem.
@@ -80,7 +84,7 @@ We have $n$ sampled genomes $x_1 \ldots x_n$, each $T$ characters long.  These c
 
 Let $g$ be our garble rate (the probability that an observed SNP is mis-measured), $0 < g < 1$.  Let $\theta$ be a jump constant.  Let $d_t$ be the distance in map units\footnote{We use morgans, where one morgan is defined to be the distance along a chromosome over which one recombination event is expected.} between SNPs $t$ and $t+1$.
 
-Then construct a hidden markov model of $n$ states, each one corresponding to a sampled genome.  Define a jump probability $J_t = 1 - e^{-d_t\theta}$.\footnote{Note that this means our transition probabilities depend on time step- technically not allowable in a Markov chain, but perfectly tractable for the algorithms we will use.}  The transition probability from state $i$ to state $j$ $\alpha_{ij}$ is
+Then construct a hidden Markov model of $n$ states, each one corresponding to a sampled genome.  Define a jump probability $J_t = 1 - e^{-d_t\theta}$.\footnote{Note that this means our transition probabilities depend on time step- technically not allowable in a Markov chain, but perfectly tractable for the algorithms we will use.}  The transition probability from state $i$ to state $j$ $\alpha_{ij}$ is
 
 \[ a_{ij} = \begin{cases} 
       (1 - J_t) + \frac{J_t}{n} & i = j \\
