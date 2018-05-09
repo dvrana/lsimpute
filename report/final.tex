@@ -140,7 +140,7 @@ This algorithm runs in $O(NT)$ work and $O(\log N)$ span.
 
 \subsection{Technologies Used}
 
-We targeted NVIDIA GPU via CUDA.  We chose to target the GPU because running the Forward-Backward algorithm required a great deal of parallel floating point computation, well-suited for %TODO: this for Dylan
+We targeted NVIDIA GPU via CUDA.  We chose to target the GPU because running the Forward-Backward algorithm required a great deal of parallel floating point computation, well-suited for GPU.  The algorithm did not need to be changed much to map to graphics card- both forward-backward and smoothing naturally parallelized in their standard forms.  Data structures also did not need much change- the data are naturally expressed in matrix form, which is easily usable on GPU.
 
 \subsection{Parallelizing Forward (and Backward)}
 
