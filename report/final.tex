@@ -100,9 +100,9 @@ The emission probability $e_t(z)$ is
 
 We are trying to discover $y_t$, the probability that the hidden state (here corresponding to the ``ancestral'' genome among our reference panel) at any given time $t$.  The Forward-Backward algorithm is a means of calculating the probability $P(y_t = x_t | O_{1:T})$ that a Markov process is in a given state at any time given an observed output sequence.  We do this via Bayes' rule
 
-$$ P(x_t | O_{1:T}) = P(x_t | O_{1:O_t}, O{t+1:T}) \propto P(O{t+1:T} | x_t) P(x_t | O_{1:t}) $$
+$$ P(x_t | O_{1:T}) = P(x_t | O_{1:O_t}, O_{t+1:T}) \propto P(O_{t+1:T} | x_t) P(x_t | O_{1:t}) $$
 
-If we assume that the hidden state must be one of the $n$ hidden states we have (a necessary assumption for imputation), we can easily calculate the normalization factor by summing across all possible hidden states at time $t$.  We calculate $P(O{t+1:T} | x_t)$ via the backward algorithm and $P(x_t | O_{1:t})$ via the forward algorithm.  This means that the $P(O{t+1:T} | x_t)$ and $P(x_t | O_{1:t})$ we calculate must only be proportional to their real values across rows.  This will allow us to optimize our algorithm later.
+If we assume that the hidden state must be one of the $n$ hidden states we have (a necessary assumption for imputation), we can easily calculate the normalization factor by summing across all possible hidden states at time $t$.  We calculate $P(O_{t+1:T} | x_t)$ via the backward algorithm and $P(x_t | O_{1:t})$ via the forward algorithm.  This means that the $P(O_{t+1:T} | x_t)$ and $P(x_t | O_{1:t})$ we calculate must only be proportional to their real values across rows.  This will allow us to optimize our algorithm later.
 
 \subsubsection{The Forward Algorithm}
 
@@ -116,7 +116,7 @@ This algorithm runs in $O(TN^2)$ work and $O(TN)$ span.  Its parallelism is limi
 
 \subsubsection{The Backward Algorithm}
 
-The Backward algorithm is much like the Forward algorithm in structure.  It is a dynamic programming algorithm to calculate $P(O{t+1:T} | x_t)$.  While the Forward algorithm starts in the first row of the matrix and works forward in time, the Backward algorithm starts at the last row and works backwards in time.  Given the same inputs as the Forward algorithm, it initializes the last row to $e_i(O_T)$, then, defines every other cell by the recursive formula 
+The Backward algorithm is much like the Forward algorithm in structure.  It is a dynamic programming algorithm to calculate $P(O_{t+1:T} | x_t)$.  While the Forward algorithm starts in the first row of the matrix and works forward in time, the Backward algorithm starts at the last row and works backwards in time.  Given the same inputs as the Forward algorithm, it initializes the last row to $e_i(O_T)$, then, defines every other cell by the recursive formula 
 
 $$ B(t, i) = \sum_j \alpha_{ij} e_i(O_t) B(t+1, j) $$
 
@@ -265,7 +265,7 @@ in the first trial results, which also included some ``warming up'' costs due
 to a mistake in our benchmarking setup (these trials were timed from
 near-program startup rather than in a tight loop within the program).
 
-We found that, at modern sampling numbers (on the order of 2500), there is
+We found that, at modern reference panel sizes (on the order of 2500), there is
 simply not enough work to be done per row for the problem to fit well onto a
 GPU. Increasing the number of SNPs does not add any opportunity for
 parallelism, as each row depends on the sum of the last row. Samples appear to
@@ -277,9 +277,9 @@ demonstrated, but have been unable to confirm this.
 
 However, moving forward, we believe that our work will prove to be important.
 Current projections predict sample sizes to increase by a factor of $\times
-100$ within the next five years. We were able to impute single samples from
-generated test cases at that scale in under 0.5 seconds with our GPU
-implementation. We predict that we could bring this figure even lower with
+100$ within the next five years \cite{genomescale}. We were able to impute single samples from
+generated test cases at that scale with $108\times$ speedups over sequential.
+We predict that we could bring this figure even lower with
 another optimization pass (this time optimizing for memory streaming, as at
 this scale, the GPUs internal memory limits become very prohibitive).
 
