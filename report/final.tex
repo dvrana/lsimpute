@@ -196,18 +196,16 @@ problem, as those threads are needed by the rest of the algorithm.
 
 The blue line is a sequential LS algorithm executed on a single-core CPU, and
 the red line is our parallel implementation performed on a single-core GPU.
-These benchmarks were taken on the GHC machines, particularly GHC40.
+These benchmarks were taken on the GHC machines, largely GHC40.
 
 Benchmarking was performed with $\theta = 1.0$ and $g = 0.1$ using randomly
-generated test data, attempting to impute a single sample. This was done
+generated test data,\footnote{The runtime of forward-backward is not affected by the values of test data or of the parameters $\theta$ and $g$.} attempting to impute a single sample. This was done
 because parallelizing over samples is trivial given multiple cores, as the
 samples are simply imputed in a for loop (with no shared state between runs).
 
 The two tables below are between two trials, as imputing one
-person requires two runs. ``One trial'' consists of 1000 progrma runs with
+person requires two runs. ``One trial'' consists of 1000 program runs with
 times and speedups averaged.
-
-% TODO: Dylan, look at this
 
 % Also TODO: Cam, fix this formatting.
 
@@ -263,19 +261,18 @@ and 200 SNPs.
 
 Ultimately, we found these results to be somewhat disappointing. According to
 profiling data, our GPU workload was spent 80-95\% in synchronization costs
-(synchronizing the rows of the computation grid in lockstep). and over 60\% of
+(synchronizing the rows of the computation grid in lockstep) and over 60\% of
 the remaining overhead was in memory transfer. This can be particularly noted
 in the first trial results, which also included some ``warming up'' costs due
 to a mistake in our benchmarking setup (these trials were timed from
 near-program startup rather than in a tight loop within the program).
 
-We found that, at modern reference panel sizes (on the order of 2500), there is
+We found that, at modern reference panel sizes (1000 to 2500 samples), there is
 simply not enough work to be done per row for the problem to fit well onto a
 GPU. Increasing the number of SNPs does not add any opportunity for
-parallelism, as each row depends on the sum of the last row. Samples appear to
-scale very well, but modern data simply does not have enough samples for this
+parallelism, as each row depends on the sum of the last row. GPUs scale well with increased sample counts, but modern data do not have enough samples for this
 to be feasible -- a 2500-wide row does not afford enough speedup to noticeably
-offset the additional GPU overhead. We predict that a well-optimized CPU
+offset the additional GPU overhead. We predict that a well-optimized and parallel CPU
 implementation would be able to far outstrip the $\times 2$ figure
 demonstrated, but have been unable to confirm this.
 
@@ -286,6 +283,8 @@ generated test cases at that scale with $108\times$ speedups over sequential.
 We predict that we could bring this figure even lower with
 another optimization pass (this time optimizing for memory streaming, as at
 this scale, the GPUs internal memory limits become very prohibitive).
+
+We intend to, in collaboration with the software development team at the Broad Institute who recommended this project, release this software as an open-source scientific tool.
 
 \section{Division of Work}
 
